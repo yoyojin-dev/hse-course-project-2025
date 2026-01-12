@@ -1,0 +1,1 @@
+в ветке main лежит вышкинский шаблон, который дан в программе курсосвой: https://www.overleaf.com/project/63d27e08ef846dad0dbb21cf
