@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра создана</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f4f4f4; /* Светло-серый фон для контраста с белой карточкой */
+        }
+
+        /* Белый квадрат-контейнер, как на макете */
+        .main-container {
+            width: 450px;
+            background-color: #ffffff;
+            padding: 50px 40px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* Легкая тень */
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .text-content {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #222;
+            text-align: left;
+            margin-left: 20px; /* Небольшой сдвиг, чтобы сымитировать макет */
+        }
+
+        .text-content p {
+            margin: 0 0 10px 0;
+        }
+
+        .text-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .highlight-code {
+            font-weight: bold;
+        }
+
+        .item-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 250px; /* Кнопка немного уже, чем текст */
+            margin-left: 20px;
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: #555;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            padding: 15px;
+            background-color: #c0d8fa; /* Светло-синий фон */
+            border: 1px solid #333; /* Темная рамка */
+            color: #000;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button:hover {
+            background-color: #a8c8f8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+
+    <div class="text-content">
+        <p>Игра успешно создана!</p>
+        <p>Вот код игры: <span class="highlight-code">{{ game_code }}</span></p>
+        <p>
+            Игроки могут подключиться по нему<br>
+            или по следующей ссылке: <span class="highlight-code">/joining/{{ game_code }}</span>
+        </p>
+    </div>
+
+    <div class="item-container">
+        <button type="submit">Перейти в лобби</button>
+    </div>
+
+</div>
+
+</body>
+</html>
