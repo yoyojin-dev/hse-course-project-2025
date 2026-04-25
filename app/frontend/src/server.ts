@@ -64,6 +64,16 @@ app.route('/joining/:gamecode')
         });
     })
 
+app.route('/game/:gamecode')
+  .get(async (req, res) => {
+    res.sendFile(path.join(FRONTEND_STATIC, 'game.html'), (err) => {
+      if (err) {
+        console.error('SendFile /game/:gamecode error:', err);
+        res.status((err as any)?.status || 500).end();
+      }
+    });
+  })
+
 app.route('/create')
   .get((req, res) => {
     // Delegate creation to backend: redirect client to /api/create
