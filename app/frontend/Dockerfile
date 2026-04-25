@@ -2,7 +2,13 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm install 
+
+# 🔥 Ставим всё (включая dev)
+RUN npm ci
+
+# 🔥 Явно ставим tsc глобально → он появится в $PATH
+RUN npm install -g typescript
+
 COPY . .
 RUN npm run build
 
