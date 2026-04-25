@@ -87,15 +87,47 @@
         <p>Вот код игры: <span class="highlight-code">{{ game_code }}</span></p>
         <p>
             Игроки могут подключиться по нему<br>
-            или по следующей ссылке: <span class="highlight-code">/joining/{{ game_code }}</span>
+            или по ссылке: <a class="highlight-code" href="/joining/{{ game_code }}">/joining/{{ game_code }}</a>
+        </p>
+        <p>
+            Ссылка для ведущего: <a class="highlight-code" id="facilitatorLink" href="#">открыть панель ведущего</a>
         </p>
     </div>
 
     <div class="item-container">
-        <button type="submit">Перейти в лобби</button>
+                <button type="button" id="goLobby">Перейти в лобби</button>
     </div>
 
 </div>
+
+<script>
+(function () {
+    const btn = document.getElementById('goLobby');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+        const parts = window.location.pathname.split('/').filter(Boolean);
+        const code = parts[parts.length - 1] || '';
+        if (code) {
+            window.location.href = '/joining/' + encodeURIComponent(code);
+        } else {
+            window.location.href = '/';
+        }
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const facilitatorId = params.get('facilitator_id') || '';
+    const link = document.getElementById('facilitatorLink');
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const code = parts[parts.length - 1] || '';
+    if (link && code && facilitatorId) {
+        link.href = '/game/' + encodeURIComponent(code) + '?player_id=' + encodeURIComponent(facilitatorId);
+    } else if (link) {
+        link.textContent = 'id ведущего не передан';
+        link.removeAttribute('href');
+    }
+})();
+</script>
 
 </body>
 </html>

@@ -1,86 +1,208 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход в лобби</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background-color: #ffffff;
-        }
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Вход в лобби</title>
+        <style>
+                body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        background-color: #ffffff;
+                }
 
-        .main-container {
-            width: 320px;
-            display: flex;
-            flex-direction: column;
-            gap: 25px; /* Отступ между блоками */
-        }
+                .main-container {
+                        width: 360px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 16px;
+                }
 
-        .item-container {
-            display: flex;
-            flex-direction: column;
-            gap: 5px; /* Отступ между подписью и самим элементом */
-        }
+                h1 {
+                        margin: 0;
+                        font-size: 22px;
+                }
 
-        .meta-label {
-            font-size: 12px;
-            color: #333;
-            font-family: 'Courier New', monospace;
-        }
+                .code {
+                        background: #eef5ff;
+                        border: 1px solid #c9d8f3;
+                        padding: 10px 12px;
+                        border-radius: 6px;
+                        font-weight: 700;
+                }
 
-        input {
-            padding: 12px;
-            background-color: #a7f3b6; /* Светло-зеленый фон */
-            border: none;
-            color: #000;
-            font-size: 18px;
-            width: 100%;
-            box-sizing: border-box;
-        }
+                input {
+                        padding: 12px;
+                        background-color: #a7f3b6;
+                        border: 1px solid #7fb98a;
+                        color: #000;
+                        font-size: 18px;
+                        width: 100%;
+                        box-sizing: border-box;
+                        border-radius: 6px;
+                }
 
-        input::placeholder {
-            color: #000; /* Темный цвет текста-подсказки, как на макете */
-        }
+                input:focus {
+                        outline: 2px solid #4e7ab6;
+                        outline-offset: 1px;
+                }
 
-        input:focus {
-            outline: 2px solid #555;
-        }
+                button {
+                        padding: 13px;
+                        background-color: #c0d8fa;
+                        border: 1px solid #5476a8;
+                        color: #000;
+                        font-size: 16px;
+                        cursor: pointer;
+                        width: 100%;
+                        box-sizing: border-box;
+                        border-radius: 6px;
+                        font-weight: 600;
+                }
 
-        button {
-            padding: 15px;
-            background-color: #c0d8fa; /* Светло-синий фон */
-            border: 1px solid #333; /* Тонкая темная рамка */
-            color: #000;
-            font-size: 16px;
-            cursor: pointer;
-            width: 100%;
-            box-sizing: border-box;
-        }
+                button:disabled {
+                        opacity: 0.7;
+                        cursor: default;
+                }
 
-        button:hover {
-            background-color: #a8c8f8; /* Легкое затемнение при наведении */
-        }
-    </style>
+                .error {
+                        min-height: 20px;
+                        color: #b42318;
+                        font-size: 14px;
+                }
+
+                .muted {
+                        color: #5d5d5d;
+                        font-size: 13px;
+                }
+        </style>
 </head>
 <body>
 
 <div class="main-container">
-    <div class="item-container">
-        <input type="text" id="nickname" placeholder="Введите никнейм...">
-    </div>
+        <h1>Подключение к игре</h1>
+        <div class="code">Код игры: <span id="gameCode">...</span></div>
 
-    <div class="item-container">
-        <button type="submit">Войти в лобби</button>
-    </div>
+    <label for="team">Команда</label>
+    <select id="team" style="padding:12px;border:1px solid #7fb98a;border-radius:6px;font-size:16px;">
+        <option value="">Загрузка команд...</option>
+    </select>
+
+        <label for="nickname">Ваш никнейм</label>
+        <input type="text" id="nickname" placeholder="Введите никнейм..." maxlength="20">
+
+        <button id="joinBtn" type="button">Войти в игру</button>
+        <div class="error" id="error"></div>
+        <div class="muted">После входа вы попадете на страницу игрового процесса.</div>
 </div>
+
+<script>
+(function () {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const gameCode = pathParts[pathParts.length - 1] || '';
+
+    const gameCodeEl = document.getElementById('gameCode');
+    const nicknameEl = document.getElementById('nickname');
+    const teamEl = document.getElementById('team');
+    const joinBtn = document.getElementById('joinBtn');
+    const errorEl = document.getElementById('error');
+
+    gameCodeEl.textContent = gameCode || 'неизвестно';
+
+    function setError(msg) {
+        errorEl.textContent = msg || '';
+    }
+
+    async function loadTeams() {
+        if (!gameCode) return;
+        try {
+            const res = await fetch('/api/game/' + encodeURIComponent(gameCode), { headers: { 'Accept': 'application/json' } });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !Array.isArray(data.teams)) {
+                setError(data.error || 'Не удалось загрузить команды.');
+                return;
+            }
+
+            teamEl.innerHTML = '';
+            data.teams.forEach((team) => {
+                const opt = document.createElement('option');
+                const occupied = Array.isArray(team.members) ? team.members.length : 0;
+                opt.value = team.id;
+                opt.textContent = team.name + ' (' + occupied + '/5)';
+                teamEl.appendChild(opt);
+            });
+        } catch (e) {
+            setError('Сервер недоступен.');
+        }
+    }
+
+    async function join() {
+        const nickname = (nicknameEl.value || '').trim();
+        const teamId = teamEl.value;
+        if (!gameCode) {
+            setError('Некорректная ссылка: отсутствует код игры.');
+            return;
+        }
+        if (!teamId) {
+            setError('Выберите команду.');
+            return;
+        }
+        if (!nickname) {
+            setError('Введите никнейм.');
+            return;
+        }
+
+        setError('');
+        joinBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ game_code: gameCode, nickname, team_id: teamId })
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setError(data.error || 'Не удалось войти в игру.');
+                return;
+            }
+
+            if (data.redirect_to) {
+                window.location.href = data.redirect_to;
+                return;
+            }
+
+            if (data.game_code && data.player_id) {
+                window.location.href = '/game/' + encodeURIComponent(data.game_code) + '?player_id=' + encodeURIComponent(data.player_id);
+                return;
+            }
+
+            setError('Некорректный ответ сервера.');
+        } catch (e) {
+            setError('Сервер недоступен. Попробуйте снова.');
+        } finally {
+            joinBtn.disabled = false;
+        }
+    }
+
+    joinBtn.addEventListener('click', join);
+    nicknameEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            join();
+        }
+    });
+
+    loadTeams();
+})();
+</script>
 
 </body>
 </html>
