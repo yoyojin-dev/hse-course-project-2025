@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 var boardStages = []string{"ready", "in_progress", "review", "done"}
@@ -93,12 +95,15 @@ type Server struct {
 	playerCounter int64
 	taskCounter   int64
 	rng           *rand.Rand
+	wsMu          sync.Mutex
+	wsGames       map[string]map[*wsClient]struct{}
 }
 
 func newServer() *Server {
 	return &Server{
-		games: make(map[string]*Game),
-		rng:   rand.New(rand.NewSource(time.Now().UnixNano())),
+		games:   make(map[string]*Game),
+		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
+		wsGames: make(map[string]map[*wsClient]struct{}),
 	}
 }
 
@@ -180,6 +185,85 @@ type setWIPRequest struct {
 	PlayerID string `json:"player_id"`
 	TeamID   string `json:"team_id"`
 	WIPLimit int    `json:"wip_limit"`
+}
+
+type lobbyMessage struct {
+	Type     string `json:"type"`
+	GameCode string `json:"game_code,omitempty"`
+}
+
+type lobbyResponse struct {
+	Type       string `json:"type"`
+	OK         bool   `json:"ok"`
+	RedirectTo string `json:"redirect_to,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+type wsClient struct {
+	conn *websocket.Conn
+	mu   sync.Mutex
+}
+
+type gameSocketMessage struct {
+	Type  string        `json:"type"`
+	State stateResponse `json:"state,omitempty"`
+	Error string        `json:"error,omitempty"`
+}
+
+var lobbyUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+var gameUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+func (c *wsClient) sendJSON(payload interface{}) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.conn.WriteJSON(payload)
+}
+
+func (s *Server) registerGameClient(code string, client *wsClient) {
+	s.wsMu.Lock()
+	defer s.wsMu.Unlock()
+	if s.wsGames[code] == nil {
+		s.wsGames[code] = make(map[*wsClient]struct{})
+	}
+	s.wsGames[code][client] = struct{}{}
+}
+
+func (s *Server) unregisterGameClient(code string, client *wsClient) {
+	s.wsMu.Lock()
+	defer s.wsMu.Unlock()
+	if s.wsGames[code] == nil {
+		return
+	}
+	delete(s.wsGames[code], client)
+	if len(s.wsGames[code]) == 0 {
+		delete(s.wsGames, code)
+	}
+}
+
+func (s *Server) broadcastGameState(code string, state stateResponse) {
+	s.wsMu.Lock()
+	clients := make([]*wsClient, 0, len(s.wsGames[code]))
+	for client := range s.wsGames[code] {
+		clients = append(clients, client)
+	}
+	s.wsMu.Unlock()
+
+	if len(clients) == 0 {
+		return
+	}
+
+	msg := gameSocketMessage{Type: "state", State: state}
+	for _, client := range clients {
+		if err := client.sendJSON(msg); err != nil {
+			_ = client.conn.Close()
+			s.unregisterGameClient(code, client)
+		}
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
@@ -606,6 +690,84 @@ func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "hello from backend")
 }
 
+func (s *Server) handleLobbyWS(w http.ResponseWriter, r *http.Request) {
+	conn, err := lobbyUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+
+	for {
+		var msg lobbyMessage
+		if err := conn.ReadJSON(&msg); err != nil {
+			return
+		}
+
+		switch msg.Type {
+		case "join_redirect":
+			code := strings.TrimSpace(msg.GameCode)
+			if code == "" {
+				_ = conn.WriteJSON(lobbyResponse{Type: "join_redirect", OK: false, Error: "missing game_code"})
+				continue
+			}
+			s.mu.RLock()
+			_, ok := s.findGame(code)
+			s.mu.RUnlock()
+			if ok {
+				_ = conn.WriteJSON(lobbyResponse{Type: "join_redirect", OK: true, RedirectTo: "/joining/" + code})
+			} else {
+				_ = conn.WriteJSON(lobbyResponse{Type: "join_redirect", OK: false, Error: "game not found"})
+			}
+		case "ping":
+			_ = conn.WriteJSON(lobbyResponse{Type: "pong", OK: true})
+		default:
+			_ = conn.WriteJSON(lobbyResponse{Type: msg.Type, OK: false, Error: "unknown message type"})
+		}
+	}
+}
+
+func (s *Server) handleGameWS(w http.ResponseWriter, r *http.Request) {
+	code := strings.TrimSpace(r.URL.Query().Get("code"))
+	if code == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	s.mu.RLock()
+	g, ok := s.findGame(code)
+	if !ok {
+		s.mu.RUnlock()
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	state := stateFromGame(g)
+	s.mu.RUnlock()
+
+	conn, err := gameUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	client := &wsClient{conn: conn}
+	s.registerGameClient(code, client)
+
+	_ = client.sendJSON(gameSocketMessage{Type: "state", State: state})
+
+	defer func() {
+		s.unregisterGameClient(code, client)
+		_ = conn.Close()
+	}()
+
+	for {
+		var msg map[string]string
+		if err := conn.ReadJSON(&msg); err != nil {
+			return
+		}
+		if msg["type"] == "ping" {
+			_ = client.sendJSON(gameSocketMessage{Type: "pong"})
+		}
+	}
+}
+
 func (s *Server) handleJoinRedirect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -735,34 +897,40 @@ func (s *Server) handleJoinGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	g, ok := s.findGame(code)
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "game not found")
 		return
 	}
 	if g.Started {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game already started")
 		return
 	}
 	team, teamExists := g.Teams[teamID]
 	if !teamExists {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusBadRequest, "unknown team")
 		return
 	}
 	if len(team.Members) >= 5 {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "team is full (max 5)")
 		return
 	}
 
 	for _, existing := range g.Players {
 		if strings.EqualFold(existing.Nickname, nickname) {
+			state := stateFromGame(g)
+			s.mu.Unlock()
 			writeJSON(w, http.StatusOK, map[string]string{
 				"game_code":   g.Code,
 				"player_id":   existing.ID,
 				"redirect_to": "/game/" + g.Code + "?player_id=" + existing.ID,
 			})
+			s.broadcastGameState(code, state)
 			return
 		}
 	}
@@ -772,12 +940,15 @@ func (s *Server) handleJoinGame(w http.ResponseWriter, r *http.Request) {
 	g.Players[playerID] = p
 	team.Members = append(team.Members, playerID)
 	s.appendLog(g, "join", nickname+" присоединился к команде "+team.Name)
+	state := stateFromGame(g)
+	s.mu.Unlock()
 
 	writeJSON(w, http.StatusCreated, map[string]string{
 		"game_code":   g.Code,
 		"player_id":   playerID,
 		"redirect_to": "/game/" + g.Code + "?player_id=" + playerID,
 	})
+	s.broadcastGameState(code, state)
 }
 
 func (s *Server) handleGetGameState(w http.ResponseWriter, r *http.Request, code string) {
@@ -806,23 +977,26 @@ func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code st
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	g, ok := s.findGame(code)
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "game not found")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, err.Error())
 		return
 	}
 	if g.Started {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game already started")
 		return
 	}
 	for _, tid := range g.TeamOrder {
 		if len(g.Teams[tid].Members) == 0 {
+			s.mu.Unlock()
 			errorJSON(w, http.StatusConflict, "each team must have at least 1 player")
 			return
 		}
@@ -836,6 +1010,7 @@ func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code st
 		}
 	}
 	if !startedAnyProject {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "start at least one project first")
 		return
 	}
@@ -847,8 +1022,11 @@ func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code st
 	g.Phase = "running"
 	s.ensureRunningTurn(g)
 	s.appendLog(g, "start", "Игра запущена. Ходы выполняются по очереди команд.")
+	state := stateFromGame(g)
+	s.mu.Unlock()
 
-	writeJSON(w, http.StatusOK, stateFromGame(g))
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
 }
 
 func (s *Server) handleStartProject(w http.ResponseWriter, r *http.Request, code string) {
@@ -865,23 +1043,26 @@ func (s *Server) handleStartProject(w http.ResponseWriter, r *http.Request, code
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	g, ok := s.findGame(code)
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "game not found")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, err.Error())
 		return
 	}
 	p, ok := g.Projects[req.ProjectID]
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "project not found")
 		return
 	}
 	if p.Started {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "project already started")
 		return
 	}
@@ -900,7 +1081,11 @@ func (s *Server) handleStartProject(w http.ResponseWriter, r *http.Request, code
 	}
 
 	s.appendLog(g, "project", "Ведущий запустил проект "+p.Name+".")
-	writeJSON(w, http.StatusOK, stateFromGame(g))
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
 }
 
 func (s *Server) handleMoveTask(w http.ResponseWriter, r *http.Request, code string) {
@@ -917,40 +1102,47 @@ func (s *Server) handleMoveTask(w http.ResponseWriter, r *http.Request, code str
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	g, ok := s.findGame(code)
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "game not found")
 		return
 	}
 	if !g.Started {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game is not started")
 		return
 	}
 	if g.Finished {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game is already finished")
 		return
 	}
 	if g.Phase != "running" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "moves are allowed only during running phase")
 		return
 	}
 
 	player, ok := g.Players[req.PlayerID]
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, "player is not in game")
 		return
 	}
 	if player.Role != "player" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, "facilitator cannot make team moves")
 		return
 	}
 	if !taskBelongsToCurrentTurnTeam(g, player) {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, "not your team turn")
 		return
 	}
 	if g.CurrentCoin != "" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "coin already tossed for this turn")
 		return
 	}
@@ -983,7 +1175,11 @@ func (s *Server) handleMoveTask(w http.ResponseWriter, r *http.Request, code str
 		s.appendLog(g, "coin", "Команда "+team.Name+" бросила монетку: tails. Выполните действие перетаскиванием карточки.")
 	}
 
-	writeJSON(w, http.StatusOK, stateFromGame(g))
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
 }
 
 func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code string) {
@@ -1001,44 +1197,52 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	g, ok := s.findGame(code)
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "game not found")
 		return
 	}
 	if !g.Started {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game is not started")
 		return
 	}
 	if g.Finished {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game is already finished")
 		return
 	}
 	if g.Phase != "running" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "moves are allowed only during running phase")
 		return
 	}
 
 	player, ok := g.Players[req.PlayerID]
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, "player is not in game")
 		return
 	}
 	if player.Role != "player" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, "facilitator cannot move tasks")
 		return
 	}
 	if !taskBelongsToCurrentTurnTeam(g, player) {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, "not your team turn")
 		return
 	}
 	if g.CurrentCoin == "" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "toss coin first")
 		return
 	}
 	if g.CoinPlayerID != player.ID {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, "only the player who tossed the coin can act")
 		return
 	}
@@ -1046,10 +1250,12 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 	team := g.Teams[player.TeamID]
 	task, ok := g.Tasks[req.TaskID]
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "task not found")
 		return
 	}
 	if task.TeamID != team.ID {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, "task belongs to another team")
 		return
 	}
@@ -1144,7 +1350,11 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 		s.appendLog(g, "finish", "Все проекты завершены. Игра окончена.")
 	}
 
-	writeJSON(w, http.StatusOK, stateFromGame(g))
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
 }
 
 func (s *Server) handleSetWIP(w http.ResponseWriter, r *http.Request, code string) {
@@ -1165,28 +1375,35 @@ func (s *Server) handleSetWIP(w http.ResponseWriter, r *http.Request, code strin
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	g, ok := s.findGame(code)
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "game not found")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, err.Error())
 		return
 	}
 	if g.Phase != "retro" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "WIP can be changed only during retro phase")
 		return
 	}
 	team, ok := g.Teams[req.TeamID]
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "team not found")
 		return
 	}
 	team.WIPLimit = req.WIPLimit
 	s.appendLog(g, "retro", "Изменен WIP лимит команды "+team.Name+" -> "+strconv.Itoa(req.WIPLimit))
-	writeJSON(w, http.StatusOK, stateFromGame(g))
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
 }
 
 func (s *Server) handleContinueAfterRetro(w http.ResponseWriter, r *http.Request, code string) {
@@ -1202,17 +1419,19 @@ func (s *Server) handleContinueAfterRetro(w http.ResponseWriter, r *http.Request
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	g, ok := s.findGame(code)
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "game not found")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, err.Error())
 		return
 	}
 	if g.Phase != "retro" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game is not in retro phase")
 		return
 	}
@@ -1222,7 +1441,11 @@ func (s *Server) handleContinueAfterRetro(w http.ResponseWriter, r *http.Request
 	g.TurnIndex = 0
 	s.ensureRunningTurn(g)
 	s.appendLog(g, "retro", "Ретро завершено. Игра продолжается.")
-	writeJSON(w, http.StatusOK, stateFromGame(g))
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
 }
 
 func (s *Server) handleSkipTurn(w http.ResponseWriter, r *http.Request, code string) {
@@ -1238,30 +1461,35 @@ func (s *Server) handleSkipTurn(w http.ResponseWriter, r *http.Request, code str
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	g, ok := s.findGame(code)
 	if !ok {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusNotFound, "game not found")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusForbidden, err.Error())
 		return
 	}
 	if !g.Started {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game is not started")
 		return
 	}
 	if g.Finished {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "game is already finished")
 		return
 	}
 	if g.Phase != "running" {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "skip is allowed only during running phase")
 		return
 	}
 	if len(g.TeamOrder) == 0 {
+		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "no teams in game")
 		return
 	}
@@ -1280,7 +1508,11 @@ func (s *Server) handleSkipTurn(w http.ResponseWriter, r *http.Request, code str
 		s.appendLog(g, "finish", "Все проекты завершены. Игра окончена.")
 	}
 
-	writeJSON(w, http.StatusOK, stateFromGame(g))
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
 }
 
 func (s *Server) handleGameRoutes(w http.ResponseWriter, r *http.Request) {
@@ -1337,6 +1569,8 @@ func main() {
 	http.HandleFunc("/api/create", s.handleCreateGame)
 	http.HandleFunc("/api/join", s.handleJoinGame)
 	http.HandleFunc("/api/game/", s.handleGameRoutes)
+	http.HandleFunc("/ws/lobby", s.handleLobbyWS)
+	http.HandleFunc("/ws/game", s.handleGameWS)
 
 	fmt.Println("Backend started on :8080")
 	_ = http.ListenAndServe(":8080", nil)

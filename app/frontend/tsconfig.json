@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/server.ts", "src/types.d.ts"],
+  "exclude": ["src/client/**/*"]
 }
 
