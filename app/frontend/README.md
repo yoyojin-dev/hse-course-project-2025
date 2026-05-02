@@ -1,9 +1,11 @@
-# Frontend proxy
+# Frontend proxy + React SPA
 
-Простой TypeScript-сервер для обслуживания статики и проксирования запросов в backend.
+Фронтенд состоит из двух частей:
+- React SPA (Vite) — рендер страниц и UI.
+- TypeScript-сервер (Express) — раздача собранной статики и прокси в backend.
 
-Поведением:
-- Статика: `app/frontend/static` доступна на корне `/`.
+Поведение:
+- Статика генерируется в `app/frontend/static` (`npm run build`).
 - Все запросы к `/api/*` проксируются на `http://backend:8080`.
 - WebSocket-префикс `/ws/*` проксируется на `http://backend:8080` с поддержкой upgrade.
 
@@ -12,11 +14,9 @@
 ```bash
 cd app/frontend
 npm install
-npm run dev    # запуск в режиме разработки (ts-node-dev)
-npm run build  # сборка в dist/
-npm run start  # запуск собранного приложения
+npm run dev         # Vite dev-сервер для React
+npm run build       # сборка React в static/ + сборка server.ts в dist/
+npm run start       # запуск собранного Express-сервера
 ```
 
-Docker: слушать на 0.0.0.0 и использовать `target: http://backend:8080` в прокси (видим `backend` как имя сервиса в compose).
-
-написано нейросестью
+Docker: используется `npm run build` на этапе сборки, затем `node dist/server.js`.
