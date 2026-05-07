@@ -1,0 +1,593 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nty/global//global/global/global}
+    \entry{kolb}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=1198dd406c2bd5cbc204295ecde3737e}{%
+           family={A.},
+           familyi={A\bibinitperiod},
+           given={Kolb\bibnamedelima D.},
+           giveni={K\bibinitperiod\bibinitdelim D\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {FT Press}%
+      }
+      \strng{namehash}{1198dd406c2bd5cbc204295ecde3737e}
+      \strng{fullhash}{1198dd406c2bd5cbc204295ecde3737e}
+      \strng{fullhashraw}{1198dd406c2bd5cbc204295ecde3737e}
+      \strng{bibnamehash}{1198dd406c2bd5cbc204295ecde3737e}
+      \strng{authorbibnamehash}{1198dd406c2bd5cbc204295ecde3737e}
+      \strng{authornamehash}{1198dd406c2bd5cbc204295ecde3737e}
+      \strng{authorfullhash}{1198dd406c2bd5cbc204295ecde3737e}
+      \strng{authorfullhashraw}{1198dd406c2bd5cbc204295ecde3737e}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Experiential learning: Experience as the source of learning and development.}
+      \field{year}{2014}
+    \endentry
+    \entry{games-for-edu}{article}{}{}
+      \name{author}{1}{}{%
+        {{hash=a28a200bc1e337509b13797aa36e3bd3}{%
+           family={al.},
+           familyi={a\bibinitperiod},
+           given={Randel\bibnamedelimb J.\bibnamedelimi M.},
+           giveni={R\bibinitperiod\bibinitdelim J\bibinitperiod\bibinitdelim M\bibinitperiod},
+           prefix={et},
+           prefixi={e\bibinitperiod}}}%
+      }
+      \strng{namehash}{a28a200bc1e337509b13797aa36e3bd3}
+      \strng{fullhash}{a28a200bc1e337509b13797aa36e3bd3}
+      \strng{fullhashraw}{a28a200bc1e337509b13797aa36e3bd3}
+      \strng{bibnamehash}{a28a200bc1e337509b13797aa36e3bd3}
+      \strng{authorbibnamehash}{a28a200bc1e337509b13797aa36e3bd3}
+      \strng{authornamehash}{a28a200bc1e337509b13797aa36e3bd3}
+      \strng{authorfullhash}{a28a200bc1e337509b13797aa36e3bd3}
+      \strng{authorfullhashraw}{a28a200bc1e337509b13797aa36e3bd3}
+      \field{sortinit}{a}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Simulation \& Gaming.}
+      \field{title}{The effectiveness of games for educational purposes: A review of recent research}
+      \field{year}{1992}
+    \endentry
+    \entry{kanban-book-and}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=0a973851a43085e15cf35614e386cd69}{%
+           family={Anderson},
+           familyi={A\bibinitperiod},
+           given={David\bibnamedelima J.},
+           giveni={D\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Blue Hole Press}%
+      }
+      \strng{namehash}{0a973851a43085e15cf35614e386cd69}
+      \strng{fullhash}{0a973851a43085e15cf35614e386cd69}
+      \strng{fullhashraw}{0a973851a43085e15cf35614e386cd69}
+      \strng{bibnamehash}{0a973851a43085e15cf35614e386cd69}
+      \strng{authorbibnamehash}{0a973851a43085e15cf35614e386cd69}
+      \strng{authornamehash}{0a973851a43085e15cf35614e386cd69}
+      \strng{authorfullhash}{0a973851a43085e15cf35614e386cd69}
+      \strng{authorfullhashraw}{0a973851a43085e15cf35614e386cd69}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Kanban : successful evolutionary change in your software business}
+      \field{year}{2010}
+    \endentry
+    \entry{license-cc}{online}{}{}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labeltitlesource}{title}
+      \field{title}{Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)}
+      \field{urlday}{3}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://creativecommons.org/licenses/by-sa/4.0/
+      \endverb
+      \verb{url}
+      \verb https://creativecommons.org/licenses/by-sa/4.0/
+      \endverb
+    \endentry
+    \entry{donovan-go}{book}{}{}
+      \name{author}{2}{}{%
+        {{hash=87a7b3a183bd76a052f571ec78de03ed}{%
+           family={Donovan},
+           familyi={D\bibinitperiod},
+           given={Alan\bibnamedelima AA},
+           giveni={A\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=cef3a18f3097ba31cc4cf18c95bfdfbc}{%
+           family={Kernighan},
+           familyi={K\bibinitperiod},
+           given={Brian\bibnamedelima W},
+           giveni={B\bibinitperiod\bibinitdelim W\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Addison-Wesley Professional}%
+      }
+      \strng{namehash}{1abc4d6494e6783dc4988680f58adcc6}
+      \strng{fullhash}{1abc4d6494e6783dc4988680f58adcc6}
+      \strng{fullhashraw}{1abc4d6494e6783dc4988680f58adcc6}
+      \strng{bibnamehash}{1abc4d6494e6783dc4988680f58adcc6}
+      \strng{authorbibnamehash}{1abc4d6494e6783dc4988680f58adcc6}
+      \strng{authornamehash}{1abc4d6494e6783dc4988680f58adcc6}
+      \strng{authorfullhash}{1abc4d6494e6783dc4988680f58adcc6}
+      \strng{authorfullhashraw}{1abc4d6494e6783dc4988680f58adcc6}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The Go programming language}
+      \field{year}{2015}
+    \endentry
+    \entry{driessen-gitflow}{online}{}{}
+      \name{author}{1}{}{%
+        {{hash=eb8c083d0048e06e606261e69e003f6e}{%
+           family={Driessen},
+           familyi={D\bibinitperiod},
+           given={Vincent},
+           giveni={V\bibinitperiod}}}%
+      }
+      \strng{namehash}{eb8c083d0048e06e606261e69e003f6e}
+      \strng{fullhash}{eb8c083d0048e06e606261e69e003f6e}
+      \strng{fullhashraw}{eb8c083d0048e06e606261e69e003f6e}
+      \strng{bibnamehash}{eb8c083d0048e06e606261e69e003f6e}
+      \strng{authorbibnamehash}{eb8c083d0048e06e606261e69e003f6e}
+      \strng{authornamehash}{eb8c083d0048e06e606261e69e003f6e}
+      \strng{authorfullhash}{eb8c083d0048e06e606261e69e003f6e}
+      \strng{authorfullhashraw}{eb8c083d0048e06e606261e69e003f6e}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{A successful Git branching model}
+      \field{urlday}{10}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{year}{2010}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://nvie.com/posts/a-successful-git-branching-model/
+      \endverb
+      \verb{url}
+      \verb https://nvie.com/posts/a-successful-git-branching-model/
+      \endverb
+    \endentry
+    \entry{fette-websocket}{report}{}{}
+      \name{author}{2}{}{%
+        {{hash=cdf249d29ccc7edcf24f6bfef0893ebd}{%
+           family={Fette},
+           familyi={F\bibinitperiod},
+           given={Ian},
+           giveni={I\bibinitperiod}}}%
+        {{hash=8fa97ca9bca09f72482fe5f985ecef60}{%
+           family={Melnikov},
+           familyi={M\bibinitperiod},
+           given={Alexey},
+           giveni={A\bibinitperiod}}}%
+      }
+      \list{institution}{1}{%
+        {RFC 6455, December}%
+      }
+      \strng{namehash}{a413dbe318e95f69f8330db28642e805}
+      \strng{fullhash}{a413dbe318e95f69f8330db28642e805}
+      \strng{fullhashraw}{a413dbe318e95f69f8330db28642e805}
+      \strng{bibnamehash}{a413dbe318e95f69f8330db28642e805}
+      \strng{authorbibnamehash}{a413dbe318e95f69f8330db28642e805}
+      \strng{authornamehash}{a413dbe318e95f69f8330db28642e805}
+      \strng{authorfullhash}{a413dbe318e95f69f8330db28642e805}
+      \strng{authorfullhashraw}{a413dbe318e95f69f8330db28642e805}
+      \field{sortinit}{F}
+      \field{sortinithash}{2638baaa20439f1b5a8f80c6c08a13b4}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The websocket protocol}
+      \field{type}{techreport}
+      \field{year}{2011}
+    \endentry
+    \entry{github-flow}{online}{}{}
+      \name{author}{1}{}{%
+        {{hash=d3b7c913cd04ebfec0e9ec32cb6fd58c}{%
+           family={GitHub},
+           familyi={G\bibinitperiod}}}%
+      }
+      \strng{namehash}{d3b7c913cd04ebfec0e9ec32cb6fd58c}
+      \strng{fullhash}{d3b7c913cd04ebfec0e9ec32cb6fd58c}
+      \strng{fullhashraw}{d3b7c913cd04ebfec0e9ec32cb6fd58c}
+      \strng{bibnamehash}{d3b7c913cd04ebfec0e9ec32cb6fd58c}
+      \strng{authorbibnamehash}{d3b7c913cd04ebfec0e9ec32cb6fd58c}
+      \strng{authornamehash}{d3b7c913cd04ebfec0e9ec32cb6fd58c}
+      \strng{authorfullhash}{d3b7c913cd04ebfec0e9ec32cb6fd58c}
+      \strng{authorfullhashraw}{d3b7c913cd04ebfec0e9ec32cb6fd58c}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Understanding the GitHub flow}
+      \field{urlday}{10}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{year}{2023}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://docs.github.com/en/get-started/using-github/github-flow
+      \endverb
+      \verb{url}
+      \verb https://docs.github.com/en/get-started/using-github/github-flow
+      \endverb
+    \endentry
+    \entry{gold-goal-book}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=f9cf5d6a0762bd200ee806a2e27d7074}{%
+           family={Goldratt\bibnamedelimb E.\bibnamedelimi M.},
+           familyi={G\bibinitperiod\bibinitdelim E\bibinitperiod\bibinitdelim M\bibinitperiod},
+           given={Cox\bibnamedelima J.},
+           giveni={C\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Routledge}%
+      }
+      \strng{namehash}{f9cf5d6a0762bd200ee806a2e27d7074}
+      \strng{fullhash}{f9cf5d6a0762bd200ee806a2e27d7074}
+      \strng{fullhashraw}{f9cf5d6a0762bd200ee806a2e27d7074}
+      \strng{bibnamehash}{f9cf5d6a0762bd200ee806a2e27d7074}
+      \strng{authorbibnamehash}{f9cf5d6a0762bd200ee806a2e27d7074}
+      \strng{authornamehash}{f9cf5d6a0762bd200ee806a2e27d7074}
+      \strng{authorfullhash}{f9cf5d6a0762bd200ee806a2e27d7074}
+      \strng{authorfullhashraw}{f9cf5d6a0762bd200ee806a2e27d7074}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The goal: a process of ongoing improvement.}
+      \field{year}{2016}
+    \endentry
+    \entry{high-perf-python}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=cd190c130c947cedf6c3f0a67aea1ae3}{%
+           family={Gorelick\bibnamedelima M.},
+           familyi={G\bibinitperiod\bibinitdelim M\bibinitperiod},
+           given={Ozsvald\bibnamedelima I.},
+           giveni={O\bibinitperiod\bibinitdelim I\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {O'Reilly Media, Inc.}%
+      }
+      \strng{namehash}{cd190c130c947cedf6c3f0a67aea1ae3}
+      \strng{fullhash}{cd190c130c947cedf6c3f0a67aea1ae3}
+      \strng{fullhashraw}{cd190c130c947cedf6c3f0a67aea1ae3}
+      \strng{bibnamehash}{cd190c130c947cedf6c3f0a67aea1ae3}
+      \strng{authorbibnamehash}{cd190c130c947cedf6c3f0a67aea1ae3}
+      \strng{authornamehash}{cd190c130c947cedf6c3f0a67aea1ae3}
+      \strng{authorfullhash}{cd190c130c947cedf6c3f0a67aea1ae3}
+      \strng{authorfullhashraw}{cd190c130c947cedf6c3f0a67aea1ae3}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{High performance python}
+      \field{year}{2025}
+    \endentry
+    \entry{trunk-based-dev}{online}{}{}
+      \name{author}{1}{}{%
+        {{hash=9e4622b4916886c66f8baa2d403bc1ba}{%
+           family={Hammant},
+           familyi={H\bibinitperiod},
+           given={Paul},
+           giveni={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{9e4622b4916886c66f8baa2d403bc1ba}
+      \strng{fullhash}{9e4622b4916886c66f8baa2d403bc1ba}
+      \strng{fullhashraw}{9e4622b4916886c66f8baa2d403bc1ba}
+      \strng{bibnamehash}{9e4622b4916886c66f8baa2d403bc1ba}
+      \strng{authorbibnamehash}{9e4622b4916886c66f8baa2d403bc1ba}
+      \strng{authornamehash}{9e4622b4916886c66f8baa2d403bc1ba}
+      \strng{authorfullhash}{9e4622b4916886c66f8baa2d403bc1ba}
+      \strng{authorfullhashraw}{9e4622b4916886c66f8baa2d403bc1ba}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Trunk-Based Development}
+      \field{urlday}{10}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{year}{2013}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://trunkbaseddevelopment.com/
+      \endverb
+      \verb{url}
+      \verb https://trunkbaseddevelopment.com/
+      \endverb
+    \endentry
+    \entry{learning-with-simulation}{article}{}{}
+      \name{author}{1}{}{%
+        {{hash=4b479abf52b1ec4a414445ac88e3368d}{%
+           family={Loon\bibnamedelima M.},
+           familyi={L\bibinitperiod\bibinitdelim M\bibinitperiod},
+           given={Kerridge\bibnamedelima C.},
+           giveni={K\bibinitperiod\bibinitdelim C\bibinitperiod},
+           suffix={Evans\bibnamedelima J.},
+           suffixi={E\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+      }
+      \strng{namehash}{4b479abf52b1ec4a414445ac88e3368d}
+      \strng{fullhash}{4b479abf52b1ec4a414445ac88e3368d}
+      \strng{fullhashraw}{4b479abf52b1ec4a414445ac88e3368d}
+      \strng{bibnamehash}{4b479abf52b1ec4a414445ac88e3368d}
+      \strng{authorbibnamehash}{4b479abf52b1ec4a414445ac88e3368d}
+      \strng{authornamehash}{4b479abf52b1ec4a414445ac88e3368d}
+      \strng{authorfullhash}{4b479abf52b1ec4a414445ac88e3368d}
+      \strng{authorfullhashraw}{4b479abf52b1ec4a414445ac88e3368d}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{The International Journal of Management Education.}
+      \field{title}{Learning with a strategic management simulation game: A case study}
+      \field{year}{2015}
+    \endentry
+    \entry{mesbah-spa}{inproceedings}{}{}
+      \name{author}{2}{}{%
+        {{hash=627904935c9ec79cfb7f3a336d102812}{%
+           family={Mesbah},
+           familyi={M\bibinitperiod},
+           given={Ali},
+           giveni={A\bibinitperiod}}}%
+        {{hash=65e990ff404c92f18a3795137504d7d1}{%
+           family={Deursen},
+           familyi={D\bibinitperiod},
+           given={Arie},
+           giveni={A\bibinitperiod},
+           prefix={van},
+           prefixi={v\bibinitperiod}}}%
+      }
+      \strng{namehash}{78503dce4327d50f4448e74d45599a72}
+      \strng{fullhash}{78503dce4327d50f4448e74d45599a72}
+      \strng{fullhashraw}{78503dce4327d50f4448e74d45599a72}
+      \strng{bibnamehash}{78503dce4327d50f4448e74d45599a72}
+      \strng{authorbibnamehash}{78503dce4327d50f4448e74d45599a72}
+      \strng{authornamehash}{78503dce4327d50f4448e74d45599a72}
+      \strng{authorfullhash}{78503dce4327d50f4448e74d45599a72}
+      \strng{authorfullhashraw}{78503dce4327d50f4448e74d45599a72}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 13th international conference on software engineering}
+      \field{title}{Architectural implications of single page web applications}
+      \field{year}{2007}
+    \endentry
+    \entry{react-arch}{online}{}{}
+      \name{author}{1}{}{%
+        {{hash=8be4bc579e714ed92aa654e9ef52d376}{%
+           family={Meta\bibnamedelima Platforms},
+           familyi={M\bibinitperiod\bibinitdelim P\bibinitperiod},
+           given={Inc.},
+           giveni={I\bibinitperiod}}}%
+      }
+      \strng{namehash}{8be4bc579e714ed92aa654e9ef52d376}
+      \strng{fullhash}{8be4bc579e714ed92aa654e9ef52d376}
+      \strng{fullhashraw}{8be4bc579e714ed92aa654e9ef52d376}
+      \strng{bibnamehash}{8be4bc579e714ed92aa654e9ef52d376}
+      \strng{authorbibnamehash}{8be4bc579e714ed92aa654e9ef52d376}
+      \strng{authornamehash}{8be4bc579e714ed92aa654e9ef52d376}
+      \strng{authorfullhash}{8be4bc579e714ed92aa654e9ef52d376}
+      \strng{authorfullhashraw}{8be4bc579e714ed92aa654e9ef52d376}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{React: A JavaScript library for building user interfaces}
+      \field{urlday}{27}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{year}{2024}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://react.dev/
+      \endverb
+      \verb{url}
+      \verb https://react.dev/
+      \endverb
+    \endentry
+    \entry{pimentel-websocket}{article}{}{}
+      \name{author}{2}{}{%
+        {{hash=763909db328e5a4f924593806cb52ce5}{%
+           family={Pimentel},
+           familyi={P\bibinitperiod},
+           given={Victoria},
+           giveni={V\bibinitperiod}}}%
+        {{hash=28c396f36570d07c8731badaffe47d93}{%
+           family={Nickerson},
+           familyi={N\bibinitperiod},
+           given={Bradford\bibnamedelima G},
+           giveni={B\bibinitperiod\bibinitdelim G\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {IEEE}%
+      }
+      \strng{namehash}{84ff6858514396ee59d5f47b7554cef9}
+      \strng{fullhash}{84ff6858514396ee59d5f47b7554cef9}
+      \strng{fullhashraw}{84ff6858514396ee59d5f47b7554cef9}
+      \strng{bibnamehash}{84ff6858514396ee59d5f47b7554cef9}
+      \strng{authorbibnamehash}{84ff6858514396ee59d5f47b7554cef9}
+      \strng{authornamehash}{84ff6858514396ee59d5f47b7554cef9}
+      \strng{authorfullhash}{84ff6858514396ee59d5f47b7554cef9}
+      \strng{authorfullhashraw}{84ff6858514396ee59d5f47b7554cef9}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Internet Computing}
+      \field{number}{4}
+      \field{title}{Communicating and displaying real-time data with websocket}
+      \field{volume}{16}
+      \field{year}{2012}
+      \field{pages}{45\bibrangedash 53}
+      \range{pages}{9}
+    \endentry
+    \entry{scrum-guide}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=97bc1129e2f4b762051d935ae0a22e4f}{%
+           family={Schwaber\bibnamedelima K.},
+           familyi={S\bibinitperiod\bibinitdelim K\bibinitperiod},
+           given={Sutherland\bibnamedelima J.},
+           giveni={S\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Scrum Alliance}%
+      }
+      \strng{namehash}{97bc1129e2f4b762051d935ae0a22e4f}
+      \strng{fullhash}{97bc1129e2f4b762051d935ae0a22e4f}
+      \strng{fullhashraw}{97bc1129e2f4b762051d935ae0a22e4f}
+      \strng{bibnamehash}{97bc1129e2f4b762051d935ae0a22e4f}
+      \strng{authorbibnamehash}{97bc1129e2f4b762051d935ae0a22e4f}
+      \strng{authornamehash}{97bc1129e2f4b762051d935ae0a22e4f}
+      \strng{authorfullhash}{97bc1129e2f4b762051d935ae0a22e4f}
+      \strng{authorfullhashraw}{97bc1129e2f4b762051d935ae0a22e4f}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The Scrum Guide: The Definitive Guide to Scrum: The Rules of the Game}
+      \field{year}{2020}
+    \endentry
+    \entry{PHP-book}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=c8f37c24868b6667b121e3e7006fc915}{%
+           family={Tatroe\bibnamedelima K.},
+           familyi={T\bibinitperiod\bibinitdelim K\bibinitperiod},
+           given={MacIntyre\bibnamedelima P.},
+           giveni={M\bibinitperiod\bibinitdelim P\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {O'Reilly Media, Inc.}%
+      }
+      \strng{namehash}{c8f37c24868b6667b121e3e7006fc915}
+      \strng{fullhash}{c8f37c24868b6667b121e3e7006fc915}
+      \strng{fullhashraw}{c8f37c24868b6667b121e3e7006fc915}
+      \strng{bibnamehash}{c8f37c24868b6667b121e3e7006fc915}
+      \strng{authorbibnamehash}{c8f37c24868b6667b121e3e7006fc915}
+      \strng{authornamehash}{c8f37c24868b6667b121e3e7006fc915}
+      \strng{authorfullhash}{c8f37c24868b6667b121e3e7006fc915}
+      \strng{authorfullhashraw}{c8f37c24868b6667b121e3e7006fc915}
+      \field{sortinit}{T}
+      \field{sortinithash}{9af77f0292593c26bde9a56e688eaee9}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Programming PHP: Creating dynamic web pages.}
+      \field{year}{2020}
+    \endentry
+    \entry{lean-book}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=1ea511e5f2b67090d8975c93deecfd29}{%
+           family={Womack\bibnamedelimb J.\bibnamedelimi P.},
+           familyi={W\bibinitperiod\bibinitdelim J\bibinitperiod\bibinitdelim P\bibinitperiod},
+           given={Jones\bibnamedelimb D.\bibnamedelimi T.},
+           giveni={J\bibinitperiod\bibinitdelim D\bibinitperiod\bibinitdelim T\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {New York: Free Press}%
+      }
+      \strng{namehash}{1ea511e5f2b67090d8975c93deecfd29}
+      \strng{fullhash}{1ea511e5f2b67090d8975c93deecfd29}
+      \strng{fullhashraw}{1ea511e5f2b67090d8975c93deecfd29}
+      \strng{bibnamehash}{1ea511e5f2b67090d8975c93deecfd29}
+      \strng{authorbibnamehash}{1ea511e5f2b67090d8975c93deecfd29}
+      \strng{authornamehash}{1ea511e5f2b67090d8975c93deecfd29}
+      \strng{authorfullhash}{1ea511e5f2b67090d8975c93deecfd29}
+      \strng{authorfullhashraw}{1ea511e5f2b67090d8975c93deecfd29}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Lean thinking: banish waste and create wealth in your corporation}
+      \field{year}{2003}
+    \endentry
+    \entry{kanban-book-bor}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=81a2a0c598a2753459d029d055038eca}{%
+           family={Барроуз},
+           familyi={Б\bibinitperiod},
+           given={Майк},
+           giveni={М\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Альпина паблишер}%
+      }
+      \strng{namehash}{81a2a0c598a2753459d029d055038eca}
+      \strng{fullhash}{81a2a0c598a2753459d029d055038eca}
+      \strng{fullhashraw}{81a2a0c598a2753459d029d055038eca}
+      \strng{bibnamehash}{81a2a0c598a2753459d029d055038eca}
+      \strng{authorbibnamehash}{81a2a0c598a2753459d029d055038eca}
+      \strng{authornamehash}{81a2a0c598a2753459d029d055038eca}
+      \strng{authorfullhash}{81a2a0c598a2753459d029d055038eca}
+      \strng{authorfullhashraw}{81a2a0c598a2753459d029d055038eca}
+      \field{sortinit}{Б}
+      \field{sortinithash}{5261f8dfa92113358b76bb09b8629977}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Канбан Метод: улучшение системы управления}
+      \field{year}{2023}
+    \endentry
+    \entry{little-law}{online}{}{}
+      \field{sortinit}{М}
+      \field{sortinithash}{3750e8e5bcd54966a663076166442576}
+      \field{labeltitlesource}{title}
+      \field{title}{Малоизвестные факты о Законе Литтла: как обеспечить предсказуемость рабочего процесса}
+      \field{urlday}{13}
+      \field{urlmonth}{1}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://neogenda.com/blog/little-law-prediction
+      \endverb
+      \verb{url}
+      \verb https://neogenda.com/blog/little-law-prediction
+      \endverb
+    \endentry
+    \entry{multi-featureban}{online}{}{}
+      \field{sortinit}{М}
+      \field{sortinithash}{3750e8e5bcd54966a663076166442576}
+      \field{labeltitlesource}{title}
+      \field{title}{Мультикомандный Featureban}
+      \field{urlday}{13}
+      \field{urlmonth}{1}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://neogenda.com/multifeatureban
+      \endverb
+      \verb{url}
+      \verb https://neogenda.com/multifeatureban
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
