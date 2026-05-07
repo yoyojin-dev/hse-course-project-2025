@@ -21,6 +21,10 @@ export type Team = {
   members?: Member[];
   counts?: Record<string, number>;
   board?: Record<string, Task[]>;
+  current_coin?: string;
+  tails_needs_block?: boolean;
+  tails_block_done?: boolean;
+  tails_start_done?: boolean;
 };
 
 export type Project = {
@@ -44,10 +48,8 @@ export type GameState = {
   max_days: number;
   projects_done: number;
   cycles_completed: number;
-  current_coin?: string;
   phase: string;
-  current_turn_team_id?: string;
-  current_turn_team_name?: string;
+  turn_action_done?: Record<string, boolean>;
   started?: boolean;
   finished?: boolean;
   facilitator_id?: string;
