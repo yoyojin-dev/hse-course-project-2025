@@ -18,7 +18,47 @@ const StartPage: React.FC = () => {
   const [error, setError] = useState('');
   const [wsReady, setWsReady] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const [showCreateSetup, setShowCreateSetup] = useState(false);
   const navigate = useNavigate();
+
+  const [teamNameInput, setTeamNameInput] = useState('');
+  const [teams, setTeams] = useState<string[]>(['Синяя', 'Зеленая', 'Желтая']);
+
+  const handleAddTeam = () => {
+    const name = teamNameInput.trim();
+    if (name && !teams.includes(name)) {
+      setTeams([...teams, name]);
+      setTeamNameInput('');
+    }
+  };
+
+  const handleRemoveTeam = (index: number) => {
+    setTeams(teams.filter((_, i) => i !== index));
+  };
+
+  const handleCreateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (teams.length < 1) {
+      setError('Нужна хотя бы одна команда.');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team_names: teams, max_days: 15 })
+      });
+      if (res.ok) {
+        const body = await res.json();
+        navigate(`/created/${body.game_code}?facilitator_id=${body.facilitator_id}`);
+      } else {
+        setError('Ошибка создания игры');
+      }
+    } catch {
+      setError('Сетевая ошибка');
+    }
+  };
 
   useEffect(() => {
     const flash = readCookie('flash');
@@ -91,20 +131,58 @@ const StartPage: React.FC = () => {
               <h2 style={{ margin: 0, fontFamily: 'IBM Plex Serif, serif' }}>Присоединиться к игре</h2>
               <div className="help">Введите код комнаты или создайте новую игру.</div>
             </div>
-            <form className="stack" action="/api/" method="post" onSubmit={handleJoinSubmit}>
-              <input
-                className={inputClass}
-                type="text"
-                name="game_code"
-                placeholder="Введите код..."
-                value={gameCode}
-                onChange={(event) => setGameCode(event.target.value)}
-              />
-              <button className="btn" type="submit">Присоединиться</button>
-            </form>
-            <form action="/api/create" method="post">
-              <button className="btn secondary" type="submit">Создать игру</button>
-            </form>
+            {!showCreateSetup && (
+              <form className="stack" action="/api/" method="post" onSubmit={handleJoinSubmit}>
+                <input
+                  className={inputClass}
+                  type="text"
+                  name="game_code"
+                  placeholder="Введите код..."
+                  value={gameCode}
+                  onChange={(event) => setGameCode(event.target.value)}
+                />
+                <button className="btn" type="submit">Присоединиться</button>
+              </form>
+            )}
+            {!showCreateSetup ? (
+              <button
+                className="btn secondary"
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setShowCreateSetup(true);
+                }}
+              >
+                Создать игру
+              </button>
+            ) : (
+              <form className="stack" onSubmit={handleCreateSubmit}>
+                <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
+                  <div>Команды:</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {teams.map((t, idx) => (
+                      <span key={idx} style={{ background: '#7952d5ff', padding: '4px 8px', borderRadius: 4 }}>
+                        {t} <button type="button" onClick={() => handleRemoveTeam(idx)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>x</button>
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      className="field"
+                      type="text"
+                      placeholder="Название команды"
+                      value={teamNameInput}
+                      onChange={(e) => setTeamNameInput(e.target.value)}
+                    />
+                    <button type="button" className="btn" onClick={handleAddTeam}>+</button>
+                  </div>
+                </div>
+                <div className="actions">
+                  <button className="btn secondary" type="submit">Подтвердить создание</button>
+                  <button className="btn" type="button" onClick={() => setShowCreateSetup(false)}>Назад</button>
+                </div>
+              </form>
+            )}
             {error && <div className="error">{error}</div>}
             <div className="help">После создания вы получите ссылку для игроков и ведущего.</div>
           </div>

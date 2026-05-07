@@ -72,13 +72,52 @@ const GamePage: React.FC = () => {
   }, [loadState, wsConnected]);
 
   const canActTeam = (teamId: string) => {
-    return !!playerId && !busy && state?.phase === 'running' && state.current_turn_team_id === teamId;
+    if (!playerId || busy || state?.phase !== 'running') return false;
+    if (isFacilitator) return false;
+    if (playerRecord?.team_id !== teamId) return false;
+    return !state?.turn_action_done?.[teamId];
   };
 
   const handleDrop = async (teamId: string, toStage: string) => {
     if (!gamecode) return;
     const drag = dragRef.current;
     if (!drag.taskId || drag.teamId !== teamId || !canActTeam(teamId)) return;
+
+    // Dropping a card back into the same column shouldn't trigger a "stage transition".
+    // On backend this causes `invalid stage transition for tails` for normal (non-blocked) tasks.
+    // We intentionally NO-OP here for non-blocked tasks, but still allow the request for `blocked`
+    // tasks since the backend uses `from == to` to perform "unblock" action.
+    const task = (() => {
+      if (!state?.teams) return null;
+      for (const t of state.teams) {
+        for (const stage of STAGES) {
+          const tasks = t.board?.[stage] || [];
+          const found = tasks.find((x) => x.id === drag.taskId);
+          if (found) return found;
+        }
+      }
+      return null;
+    })();
+
+    if (drag.fromStage === toStage) {
+
+      if (!task?.blocked) {
+        dragRef.current = { taskId: '', teamId: '', fromStage: '' };
+        return;
+      }
+    }
+    const team = state?.teams?.find((t) => t.id === teamId);
+    if (team?.current_coin === 'tails' && task && !task.blocked) {
+      const validForward =
+        (drag.fromStage === 'ready' && toStage === 'in_progress') ||
+        (drag.fromStage === 'in_progress' && toStage === 'review') ||
+        (drag.fromStage === 'review' && toStage === 'done');
+      if (!validForward) {
+        setStatusMessage('При решке это действие недоступно: попробуйте взять новую, продвинуть или разблокировать задачу.', 'err');
+        dragRef.current = { taskId: '', teamId: '', fromStage: '' };
+        return;
+      }
+    }
 
     try {
       setBusy(true);
@@ -139,23 +178,32 @@ const GamePage: React.FC = () => {
     }
   };
 
-  const moveEnabled = useMemo(() => {
-    if (!state || !playerRecord) return false;
-    const myTeam = playerRecord.team_id || '';
-    return (
-      playerRecord.role === 'player' &&
-      state.phase === 'running' &&
-      state.current_turn_team_id === myTeam &&
-      !busy &&
-      !state.current_coin
-    );
-  }, [state, playerRecord, busy]);
+  const visibleTeams = useMemo(() => {
+    if (!state?.teams) return [];
+    if (isFacilitator) return state.teams;
+    return state.teams.filter((t) => t.id === playerRecord?.team_id);
+  }, [state?.teams, isFacilitator, playerRecord]);
+  const myTeam = useMemo(
+    () => state?.teams?.find((t) => t.id === playerRecord?.team_id) || null,
+    [state?.teams, playerRecord]
+  );
 
   const metaLine = useMemo(() => {
     if (!state) return '';
-    const coinMeta = state.current_coin ? `, монетка: ${state.current_coin}` : '';
+    const coinMeta = myTeam?.current_coin ? `, монетка: ${myTeam.current_coin}` : '';
     return `День ${state.current_day} из ${state.max_days}, завершено проектов: ${state.projects_done}/${state.projects?.length || 0}, циклов ретро: ${state.cycles_completed}${coinMeta}`;
-  }, [state]);
+  }, [state, myTeam]);
+  const myActionsHint = useMemo(() => {
+    if (!myTeam || state?.phase !== 'running') return '';
+    if (state?.turn_action_done?.[myTeam.id]) return 'Ход вашей команды на этот день уже завершен.';
+    if (myTeam.current_coin === 'tails') {
+      return 'Решка: взять себе задачу ИЛИ продвинуть свою задачу ИЛИ разблокировать свою задачу.';
+    }
+    if (myTeam.current_coin === 'heads') {
+      return 'Орёл: заблокировать свою задачу И взять себе задачу.';
+    }
+    return 'Ожидаем монетку для вашей команды.';
+  }, [myTeam, state?.phase, state?.turn_action_done]);
 
   const roleLabel = useMemo(() => {
     if (!state) return 'Роль: ...';
@@ -165,8 +213,8 @@ const GamePage: React.FC = () => {
   }, [state, playerRecord, playerId]);
 
   const phaseLabel = `Фаза: ${state?.phase || '...'}`;
-  const turnLabel = state?.phase === 'running' && state.current_turn_team_name
-    ? `Ход команды: ${state.current_turn_team_name}`
+  const turnLabel = state?.phase === 'running'
+    ? `Все команды ходят одновременно`
     : 'Ход: -';
 
   const facilitator = isFacilitator && state;
@@ -193,7 +241,7 @@ const GamePage: React.FC = () => {
         <div className="layout-grid">
           <div className="card">
             <h2 style={{ marginTop: 0 }}>Командные доски</h2>
-            {(state?.teams || []).map((team) => (
+            {visibleTeams.map((team) => (
               <div key={team.id} className="card compact" style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                   <strong>{team.name}</strong>
@@ -281,18 +329,30 @@ const GamePage: React.FC = () => {
               </div>
             ))}
 
-            <div className="actions">
-              <button className="btn" type="button" disabled={!moveEnabled} onClick={makeMove}>
-                Сделать ход (монетка)
-              </button>
-              <button className="btn secondary" type="button" onClick={() => loadState(false)}>
-                Обновить
-              </button>
-            </div>
+            {!isFacilitator && myActionsHint && (
+              <div className="help" style={{ marginTop: 8 }}>
+                <strong>Доступные действия:</strong> {myActionsHint}
+              </div>
+            )}
             <div className={`status ${status.type}`}>{status.text}</div>
+
+            <div className="card compact" style={{ marginTop: 16 }}>
+              <h3 style={{ marginTop: 0 }}>История</h3>
+              <ul className="history">
+                {(state?.history || []).length ? (
+                  (state?.history || []).slice().reverse().map((entry, index) => (
+                    <li key={`${entry.day}-${index}`}>
+                      [day {entry.day}] {entry.category}: {entry.message}
+                    </li>
+                  ))
+                ) : (
+                  <li>История пустая.</li>
+                )}
+              </ul>
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div style={{ display: isFacilitator ? 'grid' : 'none', gap: 16 }}>
             <div className="card">
               <h2 style={{ marginTop: 0 }}>Панель ведущего</h2>
               {!facilitator && <div className="help">Доступно только ведущему.</div>}
@@ -326,20 +386,6 @@ const GamePage: React.FC = () => {
               </div>
             </div>
 
-            <div className="card">
-              <h2 style={{ marginTop: 0 }}>История</h2>
-              <ul className="history">
-                {(state?.history || []).length ? (
-                  (state?.history || []).slice().reverse().map((entry, index) => (
-                    <li key={`${entry.day}-${index}`}>
-                      [day {entry.day}] {entry.category}: {entry.message}
-                    </li>
-                  ))
-                ) : (
-                  <li>История пустая.</li>
-                )}
-              </ul>
-            </div>
           </div>
         </div>
       </div>
@@ -369,6 +415,15 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
   const [projectId, setProjectId] = useState(state.projects?.[0]?.id || '');
   const [teamId, setTeamId] = useState(state.teams?.[0]?.id || '');
   const [wip, setWip] = useState('2');
+  const allTeamsDone = useMemo(() => {
+    const teamIds = (state.teams || []).map((team) => team.id);
+    if (!teamIds.length) return false;
+    return teamIds.every((teamIdItem) => !!state.turn_action_done?.[teamIdItem]);
+  }, [state.teams, state.turn_action_done]);
+  const pendingTeams = useMemo(
+    () => (state.teams || []).filter((team) => !state.turn_action_done?.[team.id]).map((team) => team.name),
+    [state.teams, state.turn_action_done]
+  );
 
   useEffect(() => {
     if (!projectId && state.projects?.[0]?.id) setProjectId(state.projects[0].id);
@@ -426,15 +481,20 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
         </button>
       </div>
 
-      <div className="actions">
+      <div className="actions" style={{ display: state.started ? 'flex' : 'none' }}>
         <button
           className="btn"
           type="button"
-          disabled={busy || state.phase !== 'running' || !state.current_turn_team_id}
-          onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/skip_turn`, { player_id: playerId }, 'Ход пропущен ведущим.')}
+          disabled={busy || state.phase !== 'running' || !allTeamsDone}
+          onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/next_day`, { player_id: playerId }, 'Новый день начался. Монетки брошены.')}
         >
-          Пропустить текущий ход
+          Начать новый день
         </button>
+        {state.phase === 'running' && (
+          <span className="help">
+            {allTeamsDone ? 'Все команды завершили действия.' : `Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
+          </span>
+        )}
       </div>
 
       <div className="actions">

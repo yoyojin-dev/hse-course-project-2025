@@ -36,14 +36,14 @@ const CreatedPage: React.FC = () => {
               className="btn"
               type="button"
               onClick={() => {
-                if (gamecode) {
-                  window.location.href = `/joining/${encodeURIComponent(gamecode)}`;
+                if (facilitatorLink) {
+                  window.location.href = facilitatorLink;
                 } else {
                   window.location.href = '/start';
                 }
               }}
             >
-              Перейти в лобби
+              Открыть панель ведущего
             </button>
           </div>
         </div>
