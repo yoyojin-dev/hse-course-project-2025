@@ -209,4 +209,4 @@ __marimo__/
 /.idea/
 
 # Logs
-logs/
+logs/app/frontend/node_modules/
