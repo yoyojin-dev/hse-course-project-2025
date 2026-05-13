@@ -208,6 +208,9 @@ const GamePage: React.FC = () => {
   const roleLabel = useMemo(() => {
     if (!state) return 'Роль: ...';
     const role = playerRecord?.role === 'facilitator' ? 'Ведущий' : playerRecord ? 'Игрок' : 'Наблюдатель';
+    if (playerRecord?.role === 'facilitator') {
+        return `Роль: ${role}`;
+    }
     const meName = playerRecord?.nickname || playerId || 'без id';
     return `Роль: ${role} (${meName})`;
   }, [state, playerRecord, playerId]);
