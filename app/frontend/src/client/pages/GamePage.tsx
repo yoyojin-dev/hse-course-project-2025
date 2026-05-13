@@ -226,7 +226,7 @@ const GamePage: React.FC = () => {
     <div className="page" style={{ alignItems: 'stretch' }}>
       <div className="shell">
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center'}}>
             <div>
               <h1 style={{ margin: 0, fontFamily: 'IBM Plex Serif, serif' }}>
                 Мультикомандный Featureban: <span>{gamecode || 'unknown'}</span>
