@@ -296,8 +296,13 @@ func parseJSONOrForm(r *http.Request, dst interface{}) error {
 	return nil
 }
 
-func (s *Server) nextGameCode() string {
-	return fmt.Sprintf("%06d", atomic.AddInt64(&s.gameCounter, 1))
+func nextGameCode() string {
+    const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789"
+    code := make([]byte, 6)
+    for i := range code {
+        code[i] = charset[rand.Intn(len(charset))]
+    }
+    return string(code)
 }
 
 func (s *Server) nextPlayerID() string {
@@ -872,7 +877,7 @@ func (s *Server) handleCreateGame(w http.ResponseWriter, r *http.Request) {
 		req.MaxDays = 15
 	}
 
-	code := s.nextGameCode()
+	code := nextGameCode()
 	teams := make(map[string]*Team)
 	teamOrder := make([]string, 0, len(req.TeamNames))
 	for i, name := range req.TeamNames {
