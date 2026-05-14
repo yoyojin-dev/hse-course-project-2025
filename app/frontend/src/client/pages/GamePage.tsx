@@ -208,6 +208,9 @@ const GamePage: React.FC = () => {
   const roleLabel = useMemo(() => {
     if (!state) return 'Роль: ...';
     const role = playerRecord?.role === 'facilitator' ? 'Ведущий' : playerRecord ? 'Игрок' : 'Наблюдатель';
+    if (playerRecord?.role === 'facilitator') {
+        return `Роль: ${role}`;
+    }
     const meName = playerRecord?.nickname || playerId || 'без id';
     return `Роль: ${role} (${meName})`;
   }, [state, playerRecord, playerId]);
@@ -223,7 +226,7 @@ const GamePage: React.FC = () => {
     <div className="page" style={{ alignItems: 'stretch' }}>
       <div className="shell">
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center'}}>
             <div>
               <h1 style={{ margin: 0, fontFamily: 'IBM Plex Serif, serif' }}>
                 Мультикомандный Featureban: <span>{gamecode || 'unknown'}</span>

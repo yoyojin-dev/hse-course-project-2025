@@ -24,14 +24,6 @@ const CreatedPage: React.FC = () => {
             <div className="help">
               Игроки могут подключиться по ссылке: <a href={`/joining/${gamecode}`}>/joining/{gamecode}</a>
             </div>
-            <div className="help">
-              Ссылка для ведущего:{' '}
-              {facilitatorLink ? (
-                <a href={facilitatorLink}>открыть панель ведущего</a>
-              ) : (
-                <span>id ведущего не передан</span>
-              )}
-            </div>
             <button
               className="btn"
               type="button"

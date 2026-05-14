@@ -293,6 +293,9 @@ a {
   font-size: 12px;
   background: #151a27;
   color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .badge-chip.turn {
