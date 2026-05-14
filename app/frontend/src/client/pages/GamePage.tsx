@@ -398,12 +398,14 @@ const GamePage: React.FC = () => {
                         {stage} ({team.counts?.[stage] || 0})
                       </h4>
                       {(team.board?.[stage] || []).map((task) => {
-                        const canDrag = canActTeam(team.id);
-                        const canAct = canActTeam(team.id);
+                        const isDone = stage === 'done';
+                        const canDrag = canActTeam(team.id) && !isDone;
+                        const canAct = canActTeam(team.id) && !isDone;
                         const owner = task.owner_id || 'свободна';
                         const taskClass = [
                           'task',
                           task.blocked ? 'blocked' : '',
+                          isDone ? 'task-done' : '',
                           selectedTaskId === task.id ? 'sel' : '',
                           flashTaskId === task.id ? 'flash' : ''
                         ].join(' ');
@@ -413,8 +415,12 @@ const GamePage: React.FC = () => {
                             key={task.id}
                             className={taskClass}
                             draggable={canDrag}
-                            onClick={() => setSelectedTaskId(selectedTaskId === task.id ? '' : task.id)}
+                            onClick={() => {
+                              if (isDone) return;
+                              setSelectedTaskId(selectedTaskId === task.id ? '' : task.id);
+                            }}
                             onDragStart={(event) => {
+                              if (isDone) return;
                               dragRef.current = { taskId: task.id, teamId: team.id, fromStage: stage };
                               event.currentTarget.classList.add('dragging');
                               event.dataTransfer.effectAllowed = 'move';
@@ -429,7 +435,7 @@ const GamePage: React.FC = () => {
                             <strong>{task.id}</strong> / {task.project_id}
                             {task.penalty ? ' [штраф]' : ''} {task.blocked ? '[blocked]' : ''}
                             <span className="task-owner">Ответственный: {owner}</span>
-                            {(task.owner_id || task.blocked) && (
+                            {!isDone && (task.owner_id || task.blocked) && (
                               <div className="task-actions">
                                 <button
                                   type="button"
@@ -539,9 +545,26 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
     [state.teams]
   );
 
+  const nextDayStartsRetro = useMemo(
+    () => state.phase === 'running' && state.current_day > 0 && state.current_day % 5 === 0,
+    [state.phase, state.current_day]
+  );
+
+  const launchableProjects = useMemo(
+    () => (state.projects || []).filter((p) => !p.started && !p.completed),
+    [state.projects]
+  );
+
   useEffect(() => {
-    if (!projectId && state.projects?.[0]?.id) setProjectId(state.projects[0].id);
-  }, [state.projects, projectId]);
+    if (!launchableProjects.length) {
+      setProjectId('');
+      return;
+    }
+    const ids = new Set(launchableProjects.map((p) => p.id));
+    if (!projectId || !ids.has(projectId)) {
+      setProjectId(launchableProjects[0].id);
+    }
+  }, [launchableProjects, projectId]);
 
   useEffect(() => {
     if (!teamId && state.teams?.[0]?.id) setTeamId(state.teams[0].id);
@@ -563,29 +586,42 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
 
   return (
     <div className="stack">
-      <div className="actions">
-        <button
-          className="btn"
-          type="button"
-          disabled={busy || !!state.started}
-          onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/start`, { player_id: playerId }, 'Игра запущена.')}
-        >
-          Старт игры
-        </button>
-      </div>
+      {!state.started && (
+        <div className="actions">
+          <button
+            className="btn"
+            type="button"
+            disabled={busy}
+            onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/start`, { player_id: playerId }, 'Игра запущена.')}
+          >
+            Старт игры
+          </button>
+        </div>
+      )}
 
-      <div className="actions">
-        <select className="field" value={projectId} onChange={(event) => setProjectId(event.target.value)}>
-          {(state.projects || []).map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name} ({project.started ? 'started' : 'backlog'})
-            </option>
-          ))}
-        </select>
+      <div className="actions project-launch-actions">
+        {launchableProjects.length === 0 ? (
+          <p className="help" style={{ margin: 0 }}>
+            Все проекты уже запущены.
+          </p>
+        ) : (
+          <select
+            className="field project-launch-select"
+            value={projectId}
+            onChange={(event) => setProjectId(event.target.value)}
+            aria-label="Проект для запуска"
+          >
+            {launchableProjects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           className="btn"
           type="button"
-          disabled={busy || !canStartNewProject}
+          disabled={busy || !canStartNewProject || !projectId}
           title={
             canStartNewProject
               ? undefined
@@ -603,63 +639,68 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
         )}
       </div>
 
-      <div className="actions" style={{ display: state.started ? 'flex' : 'none' }}>
-        <button
-          className="btn"
-          type="button"
-          disabled={busy || state.phase !== 'running' || !allTeamsDone}
-          onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/next_day`, { player_id: playerId }, 'Новый день начался. Монетки брошены.')}
-        >
-          Начать новый день
-        </button>
-        {state.phase === 'running' && (
-          <span className="help">
-            {allTeamsDone ? 'Все команды завершили действия.' : `Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
-          </span>
-        )}
-      </div>
+      {state.started && state.phase === 'running' && (
+        <div className="actions">
+          <div className="facilitator-next-day">
+            <button
+              className="btn"
+              type="button"
+              disabled={busy || !allTeamsDone}
+              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/next_day`, { player_id: playerId }, nextDayStartsRetro ? 'Ретро началось.' : 'Новый день начался. Монетки брошены.')}
+            >
+              {nextDayStartsRetro ? 'Начать ретро' : 'Начать новый день'}
+            </button>
+            <span className="help facilitator-next-day-hint">
+              {allTeamsDone ? 'Все команды завершили действия.' : `Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
+            </span>
+          </div>
+        </div>
+      )}
 
-      <div className="actions">
-        <select className="field" value={teamId} onChange={(event) => setTeamId(event.target.value)}>
-          {(state.teams || []).map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name}
-            </option>
-          ))}
-        </select>
-        <input
-          className="field"
-          style={{ maxWidth: 120 }}
-          type="number"
-          min={1}
-          max={10}
-          value={wip}
-          onChange={(event) => setWip(event.target.value)}
-        />
-        <button
-          className="btn"
-          type="button"
-          disabled={busy || state.phase !== 'retro'}
-          onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/set_wip`, {
-            player_id: playerId,
-            team_id: teamId,
-            wip_limit: Number(wip || '2')
-          }, 'WIP обновлен.')}
-        >
-          Изменить WIP
-        </button>
-      </div>
-
-      <div className="actions">
-        <button
-          className="btn"
-          type="button"
-          disabled={busy || state.phase !== 'retro'}
-          onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/continue`, { player_id: playerId }, 'Ретро завершено.')}
-        >
-          Завершить ретро и продолжить
-        </button>
-      </div>
+      {state.started && state.phase === 'retro' && (
+        <div className="retro-facilitator-block">
+          <div className="actions">
+            <select className="field" value={teamId} onChange={(event) => setTeamId(event.target.value)}>
+              {(state.teams || []).map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+            <input
+              className="field"
+              style={{ maxWidth: 120 }}
+              type="number"
+              min={1}
+              max={10}
+              value={wip}
+              onChange={(event) => setWip(event.target.value)}
+            />
+            <button
+              className="btn"
+              type="button"
+              disabled={busy}
+              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/set_wip`, {
+                player_id: playerId,
+                team_id: teamId,
+                wip_limit: Number(wip || '2')
+              }, 'WIP обновлен.')}
+            >
+              Изменить WIP
+            </button>
+          </div>
+          <div className="actions">
+            <button
+              className="btn"
+              type="button"
+              disabled={busy}
+              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/continue`, { player_id: playerId }, 'Ретро завершено.')}
+            >
+              Завершить ретро и продолжить
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

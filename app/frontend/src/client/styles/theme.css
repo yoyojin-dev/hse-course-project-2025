@@ -372,6 +372,16 @@ a {
   border-color: #4a2b2b;
 }
 
+.task.task-done {
+  opacity: 0.58;
+  cursor: default;
+  pointer-events: none;
+}
+
+.task.task-done.sel {
+  outline: none;
+}
+
 .task-owner {
   display: block;
   margin-top: 4px;
@@ -473,6 +483,37 @@ a {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 8px;
+}
+
+.project-launch-actions {
+  align-items: center;
+}
+
+.project-launch-select {
+  flex: 1;
+  min-width: min(100%, 280px);
+}
+
+.retro-facilitator-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.facilitator-next-day {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.facilitator-next-day-hint {
+  margin: 0;
+  line-height: 1.45;
+  flex: 1;
+  min-width: 0;
 }
 
 .status {
