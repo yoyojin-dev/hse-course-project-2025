@@ -3,6 +3,7 @@ export type Member = {
   nickname: string;
   role?: string;
   team_id?: string;
+  current_coin?: string;
 };
 
 export type Task = {
@@ -12,6 +13,7 @@ export type Task = {
   team_id: string;
   blocked?: boolean;
   owner_id?: string;
+  penalty?: boolean;
 };
 
 export type Team = {
@@ -34,6 +36,12 @@ export type Project = {
   started?: boolean;
   done_tasks: number;
   total_tasks: number;
+  tasks_by_team?: Record<string, number>;
+  board_stage?: string;
+  days_in_integration?: number;
+  penalty_issued?: boolean;
+  started_day?: number;
+  done_day?: number;
 };
 
 export type HistoryEntry = {
