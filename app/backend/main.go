@@ -18,10 +18,11 @@ import (
 var boardStages = []string{"ready", "in_progress", "review", "done"}
 
 type Player struct {
-	ID       string `json:"id"`
-	Nickname string `json:"nickname"`
-	TeamID   string `json:"team_id,omitempty"`
-	Role     string `json:"role"`
+	ID          string `json:"id"`
+	Nickname    string `json:"nickname"`
+	TeamID      string `json:"team_id,omitempty"`
+	Role        string `json:"role"`
+	CurrentCoin string `json:"current_coin,omitempty"`
 }
 
 type Task struct {
@@ -68,6 +69,11 @@ type LogEntry struct {
 	At       string `json:"at"`
 }
 
+type playerDayProgress struct {
+	HeadsBlockDone bool
+	HeadsStartDone bool
+}
+
 type Game struct {
 	Code            string                  `json:"code"`
 	Started         bool                    `json:"started"`
@@ -83,9 +89,10 @@ type Game struct {
 	TeamOrder       []string                `json:"-"`
 	Players         map[string]*Player      `json:"-"`
 	Tasks           map[string]*Task        `json:"-"`
-	FacilitatorID   string                  `json:"facilitator_id"`
-	TurnActionDone      map[string]bool         `json:"-"`
-	History             []LogEntry              `json:"history"`
+	FacilitatorID       string                         `json:"facilitator_id"`
+	TurnActionDone      map[string]bool                `json:"-"`
+	PlayerDayProgress   map[string]*playerDayProgress  `json:"-"`
+	History             []LogEntry                     `json:"history"`
 }
 
 type Server struct {
@@ -505,30 +512,150 @@ func (s *Server) ensureRunningTurn(g *Game) {
 	if g.TurnActionDone == nil {
 		g.TurnActionDone = make(map[string]bool)
 	}
+	if g.PlayerDayProgress == nil {
+		g.PlayerDayProgress = make(map[string]*playerDayProgress)
+	}
 }
 
-func (s *Server) rollCoinsForTeams(g *Game) {
+func (s *Server) ensurePlayerProgress(g *Game, playerID string) *playerDayProgress {
+	if g.PlayerDayProgress == nil {
+		g.PlayerDayProgress = make(map[string]*playerDayProgress)
+	}
+	if g.PlayerDayProgress[playerID] == nil {
+		g.PlayerDayProgress[playerID] = &playerDayProgress{}
+	}
+	return g.PlayerDayProgress[playerID]
+}
+
+func (s *Server) resetDayProgress(g *Game) {
+	g.TurnActionDone = make(map[string]bool)
+	g.PlayerDayProgress = make(map[string]*playerDayProgress)
+	for _, p := range g.Players {
+		if p.Role == "player" {
+			p.CurrentCoin = ""
+		}
+	}
 	for _, team := range g.Teams {
+		team.CurrentCoin = ""
+		team.TailsNeedsBlock = false
+		team.TailsBlockDone = false
+		team.TailsStartDone = false
+	}
+}
+
+func teamHasActiveWork(team *Team) bool {
+	for _, st := range []string{"ready", "in_progress", "review"} {
+		if len(team.Board[st]) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) playerHasTailsAction(g *Game, team *Team, playerID string) bool {
+	for _, st := range boardStages {
+		for _, tid := range team.Board[st] {
+			t, ok := g.Tasks[tid]
+			if !ok {
+				continue
+			}
+			if t.Blocked && t.OwnerID == playerID {
+				return true
+			}
+		}
+	}
+	ownFirst := hasOwnHeadsAction(g, team, playerID)
+	for _, st := range []string{"review", "in_progress", "ready"} {
+		for _, tid := range team.Board[st] {
+			t, ok := g.Tasks[tid]
+			if !ok || t.Blocked {
+				continue
+			}
+			if ownFirst && t.OwnerID != playerID {
+				continue
+			}
+			if st == "ready" {
+				if len(team.Board["in_progress"]) < team.WIPLimit {
+					return true
+				}
+				continue
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) playerCanAct(g *Game, team *Team, playerID string) bool {
+	player, ok := g.Players[playerID]
+	if !ok || player.CurrentCoin == "" {
+		return false
+	}
+	if !teamHasActiveWork(team) {
+		return false
+	}
+	switch player.CurrentCoin {
+	case "tails":
+		return s.playerHasTailsAction(g, team, playerID)
+	case "heads":
+		prog := s.ensurePlayerProgress(g, playerID)
+		if !prog.HeadsBlockDone && hasOwnBlockableTask(g, team, "") {
+			return true
+		}
+		if !prog.HeadsStartDone && hasReadyStartTask(g, team) {
+			return true
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+func (s *Server) autoCompleteIdlePlayers(g *Game) {
+	if g.TurnActionDone == nil {
+		g.TurnActionDone = make(map[string]bool)
+	}
+	for _, tid := range g.TeamOrder {
+		team := g.Teams[tid]
+		for _, pid := range team.Members {
+			p, ok := g.Players[pid]
+			if !ok || p.Role != "player" {
+				continue
+			}
+			if g.TurnActionDone[pid] {
+				continue
+			}
+			if !s.playerCanAct(g, team, pid) {
+				g.TurnActionDone[pid] = true
+			}
+		}
+	}
+}
+
+func (s *Server) rollCoinsForPlayers(g *Game) {
+	for _, p := range g.Players {
+		if p.Role != "player" {
+			continue
+		}
+		team := g.Teams[p.TeamID]
 		coin := "tails"
 		if s.rng.Intn(2) == 1 {
 			coin = "heads"
 		}
-		team.CurrentCoin = coin
+		p.CurrentCoin = coin
 		if coin == "heads" {
-			team.TailsNeedsBlock = hasOwnBlockableTask(g, team, "") // wait, heads isn't bound to player anymore
-			team.TailsBlockDone = !team.TailsNeedsBlock
-			team.TailsStartDone = !hasReadyStartTask(g, team)
-			s.appendLog(g, "coin", "Команда "+team.Name+" бросила монетку: heads. Блокировка/старт.")
-			if team.TailsBlockDone && team.TailsStartDone {
-				g.TurnActionDone[team.ID] = true
+			prog := s.ensurePlayerProgress(g, p.ID)
+			prog.HeadsBlockDone = !hasOwnBlockableTask(g, team, "")
+			prog.HeadsStartDone = !hasReadyStartTask(g, team)
+			if prog.HeadsBlockDone && prog.HeadsStartDone {
+				g.TurnActionDone[p.ID] = true
 			}
+			s.appendLog(g, "coin", p.Nickname+" бросил монетку: heads. Блокировка/старт.")
 		} else {
-			team.TailsNeedsBlock = false
-			team.TailsBlockDone = false
-			team.TailsStartDone = false
-			s.appendLog(g, "coin", "Команда "+team.Name+" бросила монетку: tails. Перемещение карточки.")
+			s.appendLog(g, "coin", p.Nickname+" бросил монетку: tails. Перемещение карточки.")
 		}
 	}
+	s.autoCompleteIdlePlayers(g)
 }
 
 func (s *Server) closeDayAndAdvance(g *Game) {
@@ -541,7 +668,7 @@ func (s *Server) closeDayAndAdvance(g *Game) {
 
 	g.CurrentDay++
 	s.tickProjectIntegrationDays(g)
-	g.TurnActionDone = make(map[string]bool)
+	s.resetDayProgress(g)
 
 	if (g.CurrentDay-1)%5 == 0 {
 		g.Phase = "retro"
@@ -552,7 +679,7 @@ func (s *Server) closeDayAndAdvance(g *Game) {
 
 	g.Phase = "running"
 	s.ensureRunningTurn(g)
-	s.rollCoinsForTeams(g)
+	s.rollCoinsForPlayers(g)
 	s.appendLog(g, "day", "Начался новый игровой день.")
 }
 
@@ -593,11 +720,8 @@ func removeTaskFromSlice(items []string, taskID string) []string {
 	return items
 }
 
-func taskBelongsToCurrentTurnTeam(g *Game, player *Player) bool {
-	if g.TurnActionDone != nil && g.TurnActionDone[player.TeamID] {
-		return false
-	}
-	return true
+func playerTurnFinished(g *Game, playerID string) bool {
+	return g.TurnActionDone != nil && g.TurnActionDone[playerID]
 }
 
 func firstMovableTask(g *Game, team *Team) *Task {
@@ -715,28 +839,41 @@ func hasReadyStartTask(g *Game, team *Team) bool {
 	return false
 }
 
-func allTeamsDone(g *Game) bool {
+func allPlayersDone(g *Game) bool {
 	for _, tid := range g.TeamOrder {
-		if !g.TurnActionDone[tid] {
-			return false
+		team := g.Teams[tid]
+		for _, pid := range team.Members {
+			p, ok := g.Players[pid]
+			if !ok || p.Role != "player" {
+				continue
+			}
+			if !g.TurnActionDone[pid] {
+				return false
+			}
 		}
 	}
 	return true
 }
 
-func (s *Server) advanceTurn(g *Game, teamID ...string) {
+func (s *Server) advanceTurn(g *Game, playerID ...string) {
 	if g.TurnActionDone == nil {
 		g.TurnActionDone = make(map[string]bool)
 	}
-	if len(teamID) > 0 && teamID[0] != "" {
-		g.TurnActionDone[teamID[0]] = true
+	if len(playerID) > 0 && playerID[0] != "" {
+		g.TurnActionDone[playerID[0]] = true
 		return
 	}
-	// Backward compatibility for "skip_turn": mark first pending team as done.
 	for _, tid := range g.TeamOrder {
-		if !g.TurnActionDone[tid] {
-			g.TurnActionDone[tid] = true
-			return
+		team := g.Teams[tid]
+		for _, pid := range team.Members {
+			p, ok := g.Players[pid]
+			if !ok || p.Role != "player" {
+				continue
+			}
+			if !g.TurnActionDone[pid] {
+				g.TurnActionDone[pid] = true
+				return
+			}
 		}
 	}
 }
@@ -1067,11 +1204,11 @@ func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code st
 
 	g.Started = true
 	g.Finished = false
-	g.TurnActionDone = make(map[string]bool)
+	s.resetDayProgress(g)
 	g.Phase = "running"
 	s.ensureRunningTurn(g)
-	s.rollCoinsForTeams(g)
-	s.appendLog(g, "start", "Игра запущена. Все команды ходят одновременно.")
+	s.rollCoinsForPlayers(g)
+	s.appendLog(g, "start", "Игра запущена. Все игроки ходят одновременно.")
 	state := stateFromGame(g)
 	s.mu.Unlock()
 
@@ -1201,12 +1338,12 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 		errorJSON(w, http.StatusForbidden, "ведущий не может двигать карточки")
 		return
 	}
-	if !taskBelongsToCurrentTurnTeam(g, player) {
-		errorJSON(w, http.StatusForbidden, "сейчас нельзя ходить вашей команде")
+	if playerTurnFinished(g, player.ID) {
+		errorJSON(w, http.StatusForbidden, "вы уже сделали ход в этот день")
 		return
 	}
 	team := g.Teams[player.TeamID]
-	if team.CurrentCoin == "" {
+	if player.CurrentCoin == "" {
 		errorJSON(w, http.StatusConflict, "сначала должен быть бросок монетки")
 		return
 	}
@@ -1223,7 +1360,7 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 
 	from := task.Stage
 	to := req.ToStage
-	if team.CurrentCoin == "tails" {
+	if player.CurrentCoin == "tails" {
 		needOwnOnly := hasOwnHeadsAction(g, team, player.ID)
 		if needOwnOnly && task.Stage != "ready" && task.OwnerID != player.ID {
 			errorJSON(w, http.StatusConflict, "сначала поработайте со своими задачами")
@@ -1270,9 +1407,10 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 			}
 			s.appendLog(g, "drag", "Игрок "+player.Nickname+" перетащил "+task.ID+" из "+from+" в "+to+" (tails).")
 		}
-		s.advanceTurn(g, team.ID)
+		s.advanceTurn(g, player.ID)
 	} else {
-		if !team.TailsBlockDone {
+		prog := s.ensurePlayerProgress(g, player.ID)
+		if !prog.HeadsBlockDone {
 			if from != to || from == "ready" {
 				errorJSON(w, http.StatusConflict, "орёл: сначала заблокируйте задачу в работе или на ревью")
 				return
@@ -1282,9 +1420,9 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 				return
 			}
 			task.Blocked = true
-			team.TailsBlockDone = true
+			prog.HeadsBlockDone = true
 			s.appendLog(g, "drag", "Игрок "+player.Nickname+" заблокировал "+task.ID+" (heads).")
-		} else if !team.TailsStartDone {
+		} else if !prog.HeadsStartDone {
 			if from != "ready" || to != "in_progress" {
 				errorJSON(w, http.StatusConflict, "орёл: возьмите новую задачу (готово → в работе)")
 				return
@@ -1298,17 +1436,19 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 				return
 			}
 			task.OwnerID = player.ID
-			team.TailsStartDone = true
+			prog.HeadsStartDone = true
 			s.appendLog(g, "drag", "Игрок "+player.Nickname+" начал новую задачу "+task.ID+" (heads).")
 		} else {
 			errorJSON(w, http.StatusConflict, "действия для орла на этот день уже выполнены")
 			return
 		}
 
-		if team.TailsBlockDone && team.TailsStartDone {
-			s.advanceTurn(g, team.ID)
+		if prog.HeadsBlockDone && prog.HeadsStartDone {
+			s.advanceTurn(g, player.ID)
 		}
 	}
+
+	s.autoCompleteIdlePlayers(g)
 
 	if g.ProjectsDone == len(g.ProjectOrder) {
 		g.Finished = true
@@ -1404,7 +1544,7 @@ func (s *Server) handleContinueAfterRetro(w http.ResponseWriter, r *http.Request
 
 	g.Phase = "running"
 	s.ensureRunningTurn(g)
-	s.rollCoinsForTeams(g)
+	s.rollCoinsForPlayers(g)
 	s.appendLog(g, "retro", "Ретро завершено. Игра продолжается.")
 	state := stateFromGame(g)
 	s.mu.Unlock()
@@ -1562,9 +1702,9 @@ func (s *Server) handleNextDay(w http.ResponseWriter, r *http.Request, code stri
 		errorJSON(w, http.StatusConflict, "сейчас не игровая фаза")
 		return
 	}
-	if !allTeamsDone(g) {
+	if !allPlayersDone(g) {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "нельзя начать новый день: не все команды завершили действия")
+		errorJSON(w, http.StatusConflict, "нельзя начать новый день: не все игроки завершили действия")
 		return
 	}
 

@@ -3,6 +3,7 @@ export type Member = {
   nickname: string;
   role?: string;
   team_id?: string;
+  current_coin?: string;
 };
 
 export type Task = {
