@@ -15,8 +15,8 @@ def create_game(api_client, *, team_names=None, max_days=10):
     }
     status, data, _ = api_client.json("POST", "/api/create", payload)
     assert status == 201
-    assert re.fullmatch(r"\d{6}", data["game_code"])
-    assert re.fullmatch(r"p\d+", data["facilitator_id"])
+    assert re.fullmatch(r"[A-Z0-9]{6}", data["game_code"])
+    assert re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", data["facilitator_id"])
     return data["game_code"], data["facilitator_id"]
 
 
@@ -79,7 +79,7 @@ def test_join_unknown_team_is_rejected(api_client):
         allow_error=True,
     )
     assert status == 400
-    assert data["error"] == "unknown team"
+    assert data["error"] == "неизвестная команда"
 
 
 def test_start_project_populates_ready_tasks(api_client):
@@ -120,7 +120,7 @@ def test_start_game_rejects_if_not_all_teams_have_players(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "each team must have at least 1 player"
+    assert data["error"] == "в каждой команде должен быть хотя бы один игрок"
 
 
 def start_running_game(api_client, *, team_names=None, max_days=10):
@@ -175,7 +175,7 @@ def test_start_game_requires_started_project(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "start at least one project first"
+    assert data["error"] == "сначала запустите хотя бы один проект"
 
 
 def test_start_game_forbidden_for_non_facilitator(api_client):
@@ -197,7 +197,7 @@ def test_start_game_forbidden_for_non_facilitator(api_client):
         allow_error=True,
     )
     assert status == 403
-    assert data["error"] == "only facilitator can do this"
+    assert data["error"] == "это может сделать только ведущий"
 
 
 def test_next_day_requires_all_teams_done(api_client):
@@ -210,7 +210,7 @@ def test_next_day_requires_all_teams_done(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "cannot start next day: not all teams finished actions"
+    assert data["error"] == "нельзя начать новый день: не все игроки завершили действия"
 
 
 def test_skip_turn_then_next_day_advances_day_counter(api_client):
@@ -244,7 +244,7 @@ def test_set_wip_rejected_outside_retro(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "WIP can be changed only during retro phase"
+    assert data["error"] == "лимит WIP можно менять только на ретро"
 
 
 def test_set_wip_validates_range(api_client):
@@ -259,7 +259,7 @@ def test_set_wip_validates_range(api_client):
         allow_error=True,
     )
     assert status == 400
-    assert data["error"] == "wip_limit must be in range 1..10"
+    assert data["error"] == "лимит WIP должен быть от 1 до 10"
 
 
 def test_set_wip_updates_team_during_retro(api_client):
@@ -307,6 +307,4 @@ def test_drag_rejects_task_from_another_team(api_client):
         allow_error=True,
     )
     assert status == 403
-    assert data["error"] == "task belongs to another team"
-
-
+    assert data["error"] == "задача принадлежит другой команде"
