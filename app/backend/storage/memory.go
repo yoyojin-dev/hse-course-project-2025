@@ -4,9 +4,10 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"sync/atomic"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -23,7 +24,6 @@ type memoryGame struct {
 // memoryStorage реализует Storage
 type memoryStorage struct {
 	mu          sync.RWMutex
-	userCounter int64
 	gameCounter int64
 	users       map[string]interface{}
 	usersByName map[string]string // name -> id
@@ -68,7 +68,7 @@ func extractName(user interface{}) string {
 // ---------------- UserStorage methods ----------------
 
 func (m *memoryStorage) CreateUser(user interface{}) (string, error) {
-	id := strconv.FormatInt(atomic.AddInt64(&m.userCounter, 1), 10)
+	id := uuid.New().String()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.users[id] = user

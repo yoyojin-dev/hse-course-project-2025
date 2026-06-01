@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -99,7 +100,6 @@ type Server struct {
 	mu            sync.RWMutex
 	games         map[string]*Game
 	gameCounter   int64
-	playerCounter int64
 	taskCounter   int64
 	rng           *rand.Rand
 	wsMu          sync.Mutex
@@ -313,7 +313,7 @@ func nextGameCode() string {
 }
 
 func (s *Server) nextPlayerID() string {
-	return "p" + strconv.FormatInt(atomic.AddInt64(&s.playerCounter, 1), 10)
+	return uuid.New().String()
 }
 
 func (s *Server) nextTaskID() string {

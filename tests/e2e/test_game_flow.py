@@ -2,33 +2,17 @@ from __future__ import annotations
 
 import pytest
 
+from tests.utils.flows import create_game, join_player
+
 
 pytestmark = pytest.mark.e2e
 
 
-def create_game(api_client, *, team_names=None, max_days=10):
-    status, data, _ = api_client.json(
-        "POST",
-        "/api/create",
-        {"team_names": team_names or ["QA Team"], "max_days": max_days},
-    )
-    assert status == 201
-    return data["game_code"], data["facilitator_id"]
-
-
-def join_player(api_client, code: str, nickname: str, team_id: str):
-    status, data, _ = api_client.json(
-        "POST",
-        "/api/join",
-        {"game_code": code, "nickname": nickname, "team_id": team_id},
-    )
-    assert status == 201
-    return data["player_id"]
-
-
 def test_full_game_cycle_to_retro_and_continue(api_client):
     code, facilitator_id = create_game(api_client, team_names=["QA Team"], max_days=10)
-    player_id = join_player(api_client, code, "alice", "team-1")
+    status, data = join_player(api_client, code, "alice", "team-1")
+    assert status == 201
+    player_id = data["player_id"]
     assert player_id
 
     status, state, _ = api_client.json(
@@ -91,8 +75,11 @@ def test_full_game_cycle_to_retro_and_continue(api_client):
 
 def test_permissions_and_phase_guards_during_running_game(api_client):
     code, facilitator_id = create_game(api_client, team_names=["QA", "Dev"], max_days=10)
-    player_a = join_player(api_client, code, "alice", "team-1")
-    join_player(api_client, code, "bob", "team-2")
+    status, data = join_player(api_client, code, "alice", "team-1")
+    assert status == 201
+    player_a = data["player_id"]
+    status, _ = join_player(api_client, code, "bob", "team-2")
+    assert status == 201
 
     status, _, _ = api_client.json(
         "POST",
@@ -116,7 +103,7 @@ def test_permissions_and_phase_guards_during_running_game(api_client):
         allow_error=True,
     )
     assert status == 403
-    assert data["error"] == "only facilitator can do this"
+    assert data["error"] == "это может сделать только ведущий"
 
     team1 = next(team for team in state["teams"] if team["id"] == "team-1")
     status, data, _ = api_client.json(
@@ -126,7 +113,7 @@ def test_permissions_and_phase_guards_during_running_game(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "WIP can be changed only during retro phase"
+    assert data["error"] == "лимит WIP можно менять только на ретро"
 
     status, state, _ = api_client.json("GET", f"/api/game/{code}")
     assert status == 200
@@ -140,7 +127,7 @@ def test_permissions_and_phase_guards_during_running_game(api_client):
         allow_error=True,
     )
     assert status == 403
-    assert data["error"] == "task belongs to another team"
+    assert data["error"] == "задача принадлежит другой команде"
 
     for _ in range(2):
         status, _, _ = api_client.json(
@@ -159,3 +146,39 @@ def test_permissions_and_phase_guards_during_running_game(api_client):
     assert state["current_day"] == 2
 
 
+def test_game_finishes_at_max_days(api_client):
+    code, facilitator_id = create_game(api_client, team_names=["Team A"], max_days=5)
+    status, _ = join_player(api_client, code, "alice", "team-1")
+    assert status == 201
+
+    api_client.json(
+        "POST",
+        f"/api/game/{code}/start_project",
+        {"player_id": facilitator_id, "project_id": "PR-01"},
+    )
+    api_client.json(
+        "POST",
+        f"/api/game/{code}/start",
+        {"player_id": facilitator_id},
+    )
+
+    state = None
+    for i in range(5):
+        status, _, _ = api_client.json(
+            "POST",
+            f"/api/game/{code}/skip_turn",
+            {"player_id": facilitator_id},
+        )
+        assert status == 200
+        status, state, _ = api_client.json(
+            "POST",
+            f"/api/game/{code}/next_day",
+            {"player_id": facilitator_id},
+        )
+        assert status == 200
+        if i < 4:
+            assert state["finished"] is False
+
+    assert state is not None
+    assert state["finished"] is True
+    assert state["phase"] == "finished"

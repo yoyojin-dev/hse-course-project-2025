@@ -81,7 +81,7 @@ def backend_server(backend_binary: Path, tmp_path_factory: pytest.TempPathFactor
                     with urllib_request.urlopen("http://127.0.0.1:8080/api/hello", timeout=1) as resp:
                         if resp.status == 200 and resp.read().decode("utf-8").strip() == "hello from backend":
                             break
-                except Exception as exc:  # pragma: no cover - only used on startup failures
+                except Exception as exc:
                     last_error = exc
                     time.sleep(0.2)
             else:
@@ -98,9 +98,52 @@ def backend_server(backend_binary: Path, tmp_path_factory: pytest.TempPathFactor
             _kill_process_tree(proc)
 
 
+class _NoRedirectHandler(urllib_request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 class APIClient:
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
+
+    def request_no_redirect(
+        self,
+        method: str,
+        path: str,
+        payload: Optional[Dict[str, Any]] = None,
+        *,
+        form_payload: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> Tuple[int, str, Dict[str, str]]:
+        req_headers: Dict[str, str] = {}
+        data: Optional[bytes] = None
+        if form_payload is not None:
+            req_headers["Accept"] = "text/html"
+            req_headers["Content-Type"] = "application/x-www-form-urlencoded"
+            data = form_payload.encode("utf-8") if form_payload else None
+        else:
+            req_headers["Accept"] = "application/json"
+            if payload is not None:
+                req_headers["Content-Type"] = "application/json"
+                data = json.dumps(payload).encode("utf-8")
+        if headers:
+            req_headers.update(headers)
+
+        req = urllib_request.Request(
+            f"{self.base_url}{path}",
+            data=data,
+            headers=req_headers,
+            method=method,
+        )
+        opener = urllib_request.build_opener(_NoRedirectHandler)
+        try:
+            with opener.open(req, timeout=10) as resp:
+                body = resp.read().decode("utf-8")
+                return resp.status, body, dict(resp.headers)
+        except error.HTTPError as exc:
+            body = exc.read().decode("utf-8") if exc.fp is not None else ""
+            return exc.code, body, dict(exc.headers)
 
     def request(
         self,
@@ -119,6 +162,37 @@ class APIClient:
         if payload is not None:
             req_headers.setdefault("Content-Type", "application/json")
             data = json.dumps(payload).encode("utf-8")
+
+        req = urllib_request.Request(
+            f"{self.base_url}{path}",
+            data=data,
+            headers=req_headers,
+            method=method,
+        )
+        try:
+            with urllib_request.urlopen(req, timeout=10) as resp:
+                body = resp.read().decode("utf-8")
+                return resp.status, body, dict(resp.headers)
+        except error.HTTPError as exc:
+            body = exc.read().decode("utf-8")
+            if allow_error:
+                return exc.code, body, dict(exc.headers)
+            raise AssertionError(f"{method} {path} -> {exc.code}: {body}") from exc
+
+    def form(
+        self,
+        method: str,
+        path: str,
+        payload: str,
+        *,
+        headers: Optional[Dict[str, str]] = None,
+        allow_error: bool = False,
+    ) -> Tuple[int, str, Dict[str, str]]:
+        req_headers = {"Accept": "text/html", "Content-Type": "application/x-www-form-urlencoded"}
+        if headers:
+            req_headers.update(headers)
+
+        data = payload.encode("utf-8") if payload else None
 
         req = urllib_request.Request(
             f"{self.base_url}{path}",
