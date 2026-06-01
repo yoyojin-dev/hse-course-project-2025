@@ -8,24 +8,35 @@
 \contentsline {subsection}{\numberline {4.3}Этапы реализации стори в рамках процесса}{11}{subsection.4.3}%
 \contentsline {subsection}{\numberline {4.4}Визуализация и контроль потока}{11}{subsection.4.4}%
 \contentsline {section}{\numberline {5}Обеспечение качества и роль QA в проекте}{13}{section.5}%
-\contentsline {subsection}{\numberline {5.1}QA на этапе формирования идеи и требований}{13}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Контроль качества в ходе разработки}{13}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}Тестовая стратегия backend-части}{14}{subsection.5.3}%
-\contentsline {subsection}{\numberline {5.4}Набор контролируемых тест-кейсов}{14}{subsection.5.4}%
-\contentsline {subsection}{\numberline {5.5}Процессы команды под контролем QA}{15}{subsection.5.5}%
-\contentsline {section}{\numberline {6}План дальнейшей работы}{16}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Этапы реализации проекта}{16}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Функциональная декомпозиция системы}{17}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Распределение задач по участникам}{17}{subsection.6.3}%
-\contentsline {section}{\numberline {7}Технические документации}{18}{section.7}%
-\contentsline {subsection}{\numberline {7.1}Проектирование инфраструктуры и регламентация процессов управления исходным кодом}{18}{subsection.7.1}%
-\contentsline {subsubsection}{\numberline {7.1.1}Организация репозиториев}{18}{subsubsection.7.1.1}%
-\contentsline {subsubsection}{\numberline {7.1.2}Стратегия управления ветвлением}{19}{subsubsection.7.1.2}%
-\contentsline {subsubsection}{\numberline {7.1.3}Технологический стек и автоматизация инфраструктуры}{20}{subsubsection.7.1.3}%
-\contentsline {subsubsection}{\numberline {7.1.4}Процесс релиза}{21}{subsubsection.7.1.4}%
-\contentsline {subsection}{\numberline {7.2}Страница лендинга}{21}{subsection.7.2}%
-\contentsline {subsubsection}{\numberline {7.2.1}Сетевые маршруты и протоколы}{21}{subsubsection.7.2.1}%
-\contentsline {subsubsection}{\numberline {7.2.2}Архитектура клиентского приложения (Frontend)}{21}{subsubsection.7.2.2}%
-\contentsline {subsubsection}{\numberline {7.2.3}Архитектура серверной части (Backend)}{22}{subsubsection.7.2.3}%
-\contentsline {subsubsection}{\numberline {7.2.4}Синхронизация состояния: WebSocket и механизмы отказоустойчивости}{23}{subsubsection.7.2.4}%
-\contentsline {section}{Список литературы}{24}{section*.3}%
+\contentsline {subsection}{\numberline {5.1}Организация QA-процесса}{13}{subsection.5.1}%
+\contentsline {subsubsection}{\numberline {5.1.1}QA на этапе формирования идеи и требований}{13}{subsubsection.5.1.1}%
+\contentsline {subsubsection}{\numberline {5.1.2}Контроль качества в ходе разработки}{13}{subsubsection.5.1.2}%
+\contentsline {subsubsection}{\numberline {5.1.3}Основные практики QA и тестирования}{14}{subsubsection.5.1.3}%
+\contentsline {subsection}{\numberline {5.2}Тестирование и стратегия}{15}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}Тест-дизайн и риск-ориентированный подход}{15}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}Тестовая стратегия backend-части}{15}{subsubsection.5.2.2}%
+\contentsline {subsubsection}{\numberline {5.2.3}Набор контролируемых тест-кейсов}{16}{subsubsection.5.2.3}%
+\contentsline {subsubsection}{\numberline {5.2.4}Примеры автоматизированных сценариев}{16}{subsubsection.5.2.4}%
+\contentsline {subsubsection}{\numberline {5.2.5}Окружения и организация тестирования}{17}{subsubsection.5.2.5}%
+\contentsline {subsubsection}{\numberline {5.2.6}Критерии входа и выхода из тестирования}{17}{subsubsection.5.2.6}%
+\contentsline {subsubsection}{\numberline {5.2.7}Нефункциональные проверки}{17}{subsubsection.5.2.7}%
+\contentsline {subsection}{\numberline {5.3}Дефекты и процессные практики}{18}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}Управление дефектами и результаты}{18}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}Классификация дефектов и приоритизация}{18}{subsubsection.5.3.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}Процессы команды под контролем QA}{19}{subsubsection.5.3.3}%
+\contentsline {section}{\numberline {6}План дальнейшей работы}{20}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Этапы реализации проекта}{20}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Функциональная декомпозиция системы}{21}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Распределение задач по участникам}{21}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Технические документации}{22}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Проектирование инфраструктуры и регламентация процессов управления исходным кодом}{22}{subsection.7.1}%
+\contentsline {subsubsection}{\numberline {7.1.1}Организация репозиториев}{22}{subsubsection.7.1.1}%
+\contentsline {subsubsection}{\numberline {7.1.2}Стратегия управления ветвлением}{23}{subsubsection.7.1.2}%
+\contentsline {subsubsection}{\numberline {7.1.3}Технологический стек и автоматизация инфраструктуры}{24}{subsubsection.7.1.3}%
+\contentsline {subsubsection}{\numberline {7.1.4}Процесс релиза}{25}{subsubsection.7.1.4}%
+\contentsline {subsection}{\numberline {7.2}Страница лендинга}{25}{subsection.7.2}%
+\contentsline {subsubsection}{\numberline {7.2.1}Сетевые маршруты и протоколы}{25}{subsubsection.7.2.1}%
+\contentsline {subsubsection}{\numberline {7.2.2}Архитектура клиентского приложения (Frontend)}{25}{subsubsection.7.2.2}%
+\contentsline {subsubsection}{\numberline {7.2.3}Архитектура серверной части (Backend)}{26}{subsubsection.7.2.3}%
+\contentsline {subsubsection}{\numberline {7.2.4}Синхронизация состояния: WebSocket и механизмы отказоустойчивости}{27}{subsubsection.7.2.4}%
+\contentsline {section}{Список литературы}{28}{section*.3}%
