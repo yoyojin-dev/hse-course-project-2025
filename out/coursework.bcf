@@ -2402,6 +2402,8 @@
     <bcf:citekey order="27" intorder="1">PHP-book</bcf:citekey>
     <bcf:citekey order="28" intorder="1">donovan-go</bcf:citekey>
     <bcf:citekey order="29" intorder="1">pimentel-websocket</bcf:citekey>
+    <bcf:citekey order="30" intorder="1">react-arch</bcf:citekey>
+    <bcf:citekey order="31" intorder="1">GPT</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="nty">

@@ -292,6 +292,22 @@
       \field{title}{High performance python}
       \field{year}{2025}
     \endentry
+    \entry{GPT}{online}{}{}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{labeltitlesource}{title}
+      \field{title}{GPT}
+      \field{urlday}{29}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://chatgpt.com/
+      \endverb
+      \verb{url}
+      \verb https://chatgpt.com/
+      \endverb
+    \endentry
     \entry{trunk-based-dev}{online}{}{}
       \name{author}{1}{}{%
         {{hash=9e4622b4916886c66f8baa2d403bc1ba}{%
