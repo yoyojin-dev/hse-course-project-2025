@@ -1,15 +1,15 @@
 [0] Config.pm:328> INFO - This is Biber 2.21
-[0] Config.pm:331> INFO - Logfile is 'coursework.blg'
-[91] biber-MSWIN64:342> INFO - === 
-[131] Biber.pm:421> INFO - Reading 'coursework.bcf'
-[221] Biber.pm:1002> INFO - Found 22 citekeys in bib section 0
-[233] Biber.pm:4487> INFO - Processing section 0
-[243] Biber.pm:4678> INFO - Looking for bibtex file 'refs.bib' for section 0
-[282] bibtex.pm:1713> INFO - LaTeX decoding ...
-[299] bibtex.pm:1519> INFO - Found BibTeX data source 'C:\Users\match\PycharmProjects\hse-course-project-2025\documentation\refs.bib'
-[388] UCollate.pm:68> INFO - Overriding locale 'ru-RU' defaults 'variable = shifted' with 'variable = non-ignorable'
-[388] UCollate.pm:68> INFO - Overriding locale 'ru-RU' defaults 'normalization = NFD' with 'normalization = prenormalized'
-[388] Biber.pm:4307> INFO - Sorting list 'nty/global//global/global/global' of type 'entry' with template 'nty' and locale 'ru-RU'
-[388] Biber.pm:4313> INFO - No sort tailoring available for locale 'ru-RU'
-[406] bbl.pm:676> INFO - Writing 'coursework.bbl' with encoding 'UTF-8'
-[413] bbl.pm:779> INFO - Output to coursework.bbl
+[0] Config.pm:331> INFO - Logfile is 'out/coursework.blg'
+[30] biber-darwin:342> INFO - === Fri Jun  5, 2026, 10:23:03
+[38] Biber.pm:421> INFO - Reading 'out/coursework.bcf'
+[71] Biber.pm:1002> INFO - Found 22 citekeys in bib section 0
+[77] Biber.pm:4487> INFO - Processing section 0
+[81] Biber.pm:4678> INFO - Looking for bibtex file 'refs.bib' for section 0
+[82] bibtex.pm:1713> INFO - LaTeX decoding ...
+[88] bibtex.pm:1519> INFO - Found BibTeX data source 'refs.bib'
+[134] UCollate.pm:68> INFO - Overriding locale 'ru-RU' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[134] UCollate.pm:68> INFO - Overriding locale 'ru-RU' defaults 'variable = shifted' with 'variable = non-ignorable'
+[134] Biber.pm:4307> INFO - Sorting list 'nty/global//global/global/global' of type 'entry' with template 'nty' and locale 'ru-RU'
+[134] Biber.pm:4313> INFO - No sort tailoring available for locale 'ru-RU'
+[146] bbl.pm:676> INFO - Writing 'out/coursework.bbl' with encoding 'UTF-8'
+[149] bbl.pm:779> INFO - Output to out/coursework.bbl
