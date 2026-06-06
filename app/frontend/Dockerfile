@@ -3,16 +3,16 @@ FROM node:18-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 
-# 🔥 Ставим всё (включая dev)
+# Ставим всё (включая dev)
 RUN npm ci
 
-# 🔥 Явно ставим tsc глобально → он появится в $PATH
+# Явно ставим tsc глобально, он появится в $PATH
 RUN npm install -g typescript
 
 COPY . .
 RUN npm run build
 
-# Runtime stage — без изменений
+# Runtime stage
 FROM node:18-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production

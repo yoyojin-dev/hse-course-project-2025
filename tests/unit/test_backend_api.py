@@ -318,7 +318,7 @@ def test_start_game_rejects_if_not_all_teams_have_players(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "в каждой команде должен быть хотя бы один игрок"
+    assert data["error"] == "В каждой команде должен быть хотя бы один игрок"
 
 
 def test_start_game_requires_started_project(api_client):

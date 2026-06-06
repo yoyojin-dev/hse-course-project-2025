@@ -233,7 +233,7 @@ const GamePage: React.FC = () => {
         (drag.fromStage === 'in_progress' && toStage === 'review') ||
         (drag.fromStage === 'review' && toStage === 'done');
       if (!validForward) {
-        setStatusMessage('При решке это действие недоступно: попробуйте взять новую, продвинуть или разблокировать задачу.', 'err');
+        setStatusMessage('При решке это действие недоступно: попробуйте продвинуть, разблокировать или взять новую задачу.', 'err');
         dragRef.current = { taskId: '', teamId: '', fromStage: '' };
         return;
       }
@@ -326,7 +326,7 @@ const GamePage: React.FC = () => {
   }, [myTeam, state?.phase, state?.turn_action_done, playerId, playerRecord]);
 
   const roleLabel = useMemo(() => {
-    if (!state) return 'Роль: ...';
+    if (!state) return 'Роль: ---';
     const role = playerRecord?.role === 'facilitator' ? 'Ведущий' : playerRecord ? 'Игрок' : 'Наблюдатель';
     if (playerRecord?.role === 'facilitator') {
         return `Роль: ${role}`;
@@ -335,7 +335,7 @@ const GamePage: React.FC = () => {
     return `Роль: ${role} (${meName})`;
   }, [state, playerRecord, playerId]);
 
-  const phaseLabel = `Фаза: ${state?.phase || '...'}`;
+  const phaseLabel = `Фаза: ${state?.phase === 'setup' ? 'Подготовка' : state?.phase === 'running' ? 'Игра' : state?.phase === 'retro' ? 'Ретро' : state?.phase === 'finished' ? 'Конец' : '---'}`;
   const turnLabel = state?.phase === 'running'
     ? 'Все игроки ходят одновременно'
     : 'Ход: -';
@@ -361,7 +361,14 @@ const GamePage: React.FC = () => {
 
         <div className="layout-grid">
           <div className="card">
-            <h2 style={{ marginTop: 0 }}>Командные доски</h2>
+            <h2 style={{ marginTop: 0 }}>{isFacilitator ? "Командные доски" : "Доска задач"}</h2>
+            {!isFacilitator && myActionsHint && (
+              <div className="help" style={{ marginTop: 8 }}>
+                <strong>Доступные действия:</strong> {myActionsHint}
+              </div>
+            )}
+            <div className={`status ${status.type}`}>{status.text}</div>
+            <div style={{ height: 16 }} />
             {visibleTeams.map((team) => (
               <div key={team.id} className="card compact" style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
@@ -466,20 +473,13 @@ const GamePage: React.FC = () => {
               </div>
             ))}
 
-            {!isFacilitator && myActionsHint && (
-              <div className="help" style={{ marginTop: 8 }}>
-                <strong>Доступные действия:</strong> {myActionsHint}
-              </div>
-            )}
-            <div className={`status ${status.type}`}>{status.text}</div>
-
             <div className="card compact" style={{ marginTop: 16 }}>
               <h3 style={{ marginTop: 0 }}>История</h3>
               <ul className="history">
                 {(state?.history || []).length ? (
                   (state?.history || []).slice().reverse().map((entry, index) => (
                     <li key={`${entry.day}-${index}`}>
-                      [day {entry.day}] {entry.category}: {entry.message}
+                      [День {entry.day}] {entry.message}
                     </li>
                   ))
                 ) : (
