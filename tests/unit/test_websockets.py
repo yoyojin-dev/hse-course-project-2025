@@ -61,7 +61,7 @@ async def test_lobby_ws_join_redirect_unknown_code(ws_base_url):
         response = await client.receive()
         assert response["type"] == "join_redirect"
         assert response["ok"] is False
-        assert response["error"] == "игра не найдена"
+        assert response["error"] == "Игра не найдена"
     finally:
         await client.close()
 
@@ -74,7 +74,7 @@ async def test_lobby_ws_join_redirect_empty_code(ws_base_url):
         response = await client.receive()
         assert response["type"] == "join_redirect"
         assert response["ok"] is False
-        assert response["error"] == "укажите код игры"
+        assert response["error"] == "Укажите код игры"
     finally:
         await client.close()
 

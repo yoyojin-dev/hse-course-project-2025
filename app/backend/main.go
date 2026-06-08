@@ -650,9 +650,9 @@ func (s *Server) rollCoinsForPlayers(g *Game) {
 			if prog.HeadsBlockDone && prog.HeadsStartDone {
 				g.TurnActionDone[p.ID] = true
 			}
-			s.appendLog(g, "coin", p.Nickname+" бросил монетку: heads. Блокировка/старт.")
+			s.appendLog(g, "coin", p.Nickname+" бросил монетку: орёл.")
 		} else {
-			s.appendLog(g, "coin", p.Nickname+" бросил монетку: tails. Перемещение карточки.")
+			s.appendLog(g, "coin", p.Nickname+" бросил монетку: решка.")
 		}
 	}
 	s.autoCompleteIdlePlayers(g)
@@ -673,7 +673,7 @@ func (s *Server) closeDayAndAdvance(g *Game) {
 	if (g.CurrentDay-1)%5 == 0 {
 		g.Phase = "retro"
 		g.CyclesCompleted++
-		s.appendLog(g, "retro", "Ретро-фаза: обсудите улучшения и при необходимости измените WIP-лимиты.")
+		s.appendLog(g, "retro", "Ретро-фаза: обсудите улучшения и при необходимости измените WIP лимиты.")
 		return
 	}
 
@@ -968,13 +968,13 @@ func (s *Server) handleJoinRedirect(w http.ResponseWriter, r *http.Request) {
 
 	req, err := parseJoinRequest(r)
 	if err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 
 	code := strings.TrimSpace(req.GameCode)
 	if code == "" {
-		errorJSON(w, http.StatusBadRequest, "укажите код игры")
+		errorJSON(w, http.StatusBadRequest, "Укажите код игры")
 		return
 	}
 
@@ -1071,7 +1071,7 @@ func (s *Server) handleJoinGame(w http.ResponseWriter, r *http.Request) {
 
 	req, err := parseJoinRequest(r)
 	if err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 
@@ -1079,7 +1079,7 @@ func (s *Server) handleJoinGame(w http.ResponseWriter, r *http.Request) {
 	nickname := strings.TrimSpace(req.Nickname)
 	teamID := strings.TrimSpace(req.TeamID)
 	if code == "" || nickname == "" || teamID == "" {
-		errorJSON(w, http.StatusBadRequest, "укажите код игры, имя и команду")
+		errorJSON(w, http.StatusBadRequest, "Укажите код игры, имя и команду")
 		return
 	}
 
@@ -1088,23 +1088,23 @@ func (s *Server) handleJoinGame(w http.ResponseWriter, r *http.Request) {
 	g, ok := s.findGame(code)
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	if g.Started {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "игра уже началась")
+		errorJSON(w, http.StatusConflict, "Игра уже началась")
 		return
 	}
 	team, teamExists := g.Teams[teamID]
 	if !teamExists {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusBadRequest, "неизвестная команда")
+		errorJSON(w, http.StatusBadRequest, "Неизвестная команда")
 		return
 	}
 	if len(team.Members) >= 5 {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "команда заполнена (не более 5 участников)")
+		errorJSON(w, http.StatusConflict, "Команда заполнена (не более 5 участников)")
 		return
 	}
 
@@ -1143,7 +1143,7 @@ func (s *Server) handleGetGameState(w http.ResponseWriter, r *http.Request, code
 	g, ok := s.findGame(code)
 	if !ok {
 		s.mu.RUnlock()
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	state := stateFromGame(g)
@@ -1154,12 +1154,12 @@ func (s *Server) handleGetGameState(w http.ResponseWriter, r *http.Request, code
 func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code string) {
 	var req playerActionRequest
 	if err := parseJSONOrForm(r, &req); err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	req.PlayerID = strings.TrimSpace(req.PlayerID)
 	if req.PlayerID == "" {
-		errorJSON(w, http.StatusBadRequest, "не указан идентификатор игрока")
+		errorJSON(w, http.StatusBadRequest, "Не указан идентификатор игрока")
 		return
 	}
 
@@ -1168,7 +1168,7 @@ func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code st
 	g, ok := s.findGame(code)
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
@@ -1178,13 +1178,13 @@ func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code st
 	}
 	if g.Started {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "игра уже началась")
+		errorJSON(w, http.StatusConflict, "Игра уже началась")
 		return
 	}
 	for _, tid := range g.TeamOrder {
 		if len(g.Teams[tid].Members) == 0 {
 			s.mu.Unlock()
-			errorJSON(w, http.StatusConflict, "в каждой команде должен быть хотя бы один игрок")
+			errorJSON(w, http.StatusConflict, "В каждой команде должен быть хотя бы один игрок")
 			return
 		}
 	}
@@ -1198,7 +1198,7 @@ func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code st
 	}
 	if !startedAnyProject {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "сначала запустите хотя бы один проект")
+		errorJSON(w, http.StatusConflict, "Сначала запустите хотя бы один проект")
 		return
 	}
 
@@ -1219,13 +1219,13 @@ func (s *Server) handleStartGame(w http.ResponseWriter, r *http.Request, code st
 func (s *Server) handleStartProject(w http.ResponseWriter, r *http.Request, code string) {
 	var req startProjectRequest
 	if err := parseJSONOrForm(r, &req); err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	req.PlayerID = strings.TrimSpace(req.PlayerID)
 	req.ProjectID = strings.TrimSpace(req.ProjectID)
 	if req.PlayerID == "" || req.ProjectID == "" {
-		errorJSON(w, http.StatusBadRequest, "не указаны идентификатор игрока или проекта")
+		errorJSON(w, http.StatusBadRequest, "Не указаны идентификатор игрока или проекта")
 		return
 	}
 
@@ -1234,7 +1234,7 @@ func (s *Server) handleStartProject(w http.ResponseWriter, r *http.Request, code
 	g, ok := s.findGame(code)
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
@@ -1245,12 +1245,12 @@ func (s *Server) handleStartProject(w http.ResponseWriter, r *http.Request, code
 	p, ok := g.Projects[req.ProjectID]
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "проект не найден")
+		errorJSON(w, http.StatusNotFound, "Проект не найден")
 		return
 	}
 	if p.Started {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "проект уже запущен")
+		errorJSON(w, http.StatusConflict, "Проект уже запущен")
 		return
 	}
 
@@ -1263,7 +1263,7 @@ func (s *Server) handleStartProject(w http.ResponseWriter, r *http.Request, code
 	}
 	if !anyEmptyReady {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "новый проект можно добавить только если колонка «Сделать» пуста хотя бы у одной команды")
+		errorJSON(w, http.StatusConflict, "Новый проект можно добавить только если колонка «Сделать» пуста хотя бы у одной команды")
 		return
 	}
 
@@ -1292,14 +1292,14 @@ func (s *Server) handleStartProject(w http.ResponseWriter, r *http.Request, code
 func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code string) {
 	var req dragTaskRequest
 	if err := parseJSONOrForm(r, &req); err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	req.PlayerID = strings.TrimSpace(req.PlayerID)
 	req.TaskID = strings.TrimSpace(req.TaskID)
 	req.ToStage = strings.TrimSpace(req.ToStage)
 	if req.PlayerID == "" || req.TaskID == "" || req.ToStage == "" {
-		errorJSON(w, http.StatusBadRequest, "не указаны идентификатор игрока, задачи или целевой колонки")
+		errorJSON(w, http.StatusBadRequest, "Не указаны идентификатор игрока, задачи или целевой колонки")
 		return
 	}
 
@@ -1313,48 +1313,48 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 
 	g, ok := s.findGame(code)
 	if !ok {
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	if !g.Started {
-		errorJSON(w, http.StatusConflict, "игра ещё не начата")
+		errorJSON(w, http.StatusConflict, "Игра ещё не начата")
 		return
 	}
 	if g.Finished {
-		errorJSON(w, http.StatusConflict, "игра уже завершена")
+		errorJSON(w, http.StatusConflict, "Игра уже завершена")
 		return
 	}
 	if g.Phase != "running" {
-		errorJSON(w, http.StatusConflict, "ходы разрешены только в игровой фазе")
+		errorJSON(w, http.StatusConflict, "Ходы разрешены только в игровой фазе")
 		return
 	}
 
 	player, ok := g.Players[req.PlayerID]
 	if !ok {
-		errorJSON(w, http.StatusForbidden, "игрок не в этой игре")
+		errorJSON(w, http.StatusForbidden, "Игрок не в этой игре")
 		return
 	}
 	if player.Role != "player" {
-		errorJSON(w, http.StatusForbidden, "ведущий не может двигать карточки")
+		errorJSON(w, http.StatusForbidden, "Ведущий не может двигать карточки")
 		return
 	}
 	if playerTurnFinished(g, player.ID) {
-		errorJSON(w, http.StatusForbidden, "вы уже сделали ход в этот день")
+		errorJSON(w, http.StatusForbidden, "Вы уже сделали ход в этот день")
 		return
 	}
 	team := g.Teams[player.TeamID]
 	if player.CurrentCoin == "" {
-		errorJSON(w, http.StatusConflict, "сначала должен быть бросок монетки")
+		errorJSON(w, http.StatusConflict, "Сначала должен быть бросок монетки")
 		return
 	}
 
 	task, ok := g.Tasks[req.TaskID]
 	if !ok {
-		errorJSON(w, http.StatusNotFound, "задача не найдена")
+		errorJSON(w, http.StatusNotFound, "Задача не найдена")
 		return
 	}
 	if task.TeamID != team.ID {
-		errorJSON(w, http.StatusForbidden, "задача принадлежит другой команде")
+		errorJSON(w, http.StatusForbidden, "Задача принадлежит другой команде")
 		return
 	}
 
@@ -1363,13 +1363,13 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 	if player.CurrentCoin == "tails" {
 		needOwnOnly := hasOwnHeadsAction(g, team, player.ID)
 		if needOwnOnly && task.Stage != "ready" && task.OwnerID != player.ID {
-			errorJSON(w, http.StatusConflict, "сначала поработайте со своими задачами")
+			errorJSON(w, http.StatusConflict, "Сначала поработайте со своими задачами")
 			return
 		}
 
 		if task.Blocked {
 			if from != to {
-				errorJSON(w, http.StatusConflict, "заблокированную задачу можно только разблокировать")
+				errorJSON(w, http.StatusConflict, "Заблокированную задачу можно только разблокировать")
 				return
 			}
 			task.Blocked = false
@@ -1386,7 +1386,6 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 				allowed = to == "done"
 			}
 			if !allowed {
-				// Invalid drag under tails should be a no-op, not a terminal state.
 				state := stateFromGame(g)
 				locked = false
 				s.mu.Unlock()
@@ -1395,51 +1394,51 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 				return
 			}
 			if to == "in_progress" && len(team.Board["in_progress"]) >= team.WIPLimit {
-				errorJSON(w, http.StatusConflict, "достигнут лимит WIP")
+				errorJSON(w, http.StatusConflict, "Достигнут лимит WIP")
 				return
 			}
 			if !s.moveTaskToStage(g, team, task, to) {
-				errorJSON(w, http.StatusConflict, "задачу нельзя переместить")
+				errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
 				return
 			}
 			if to != "done" {
 				task.OwnerID = player.ID
 			}
-			s.appendLog(g, "drag", "Игрок "+player.Nickname+" перетащил "+task.ID+" из "+from+" в "+to+" (tails).")
+			s.appendLog(g, "drag", "Игрок "+player.Nickname+" перетащил "+task.ID+" из "+from+" в "+to+" (решка).")
 		}
 		s.advanceTurn(g, player.ID)
 	} else {
 		prog := s.ensurePlayerProgress(g, player.ID)
 		if !prog.HeadsBlockDone {
 			if from != to || from == "ready" {
-				errorJSON(w, http.StatusConflict, "орёл: сначала заблокируйте задачу в работе или на ревью")
+				errorJSON(w, http.StatusConflict, "Орёл: сначала заблокируйте задачу в работе или на ревью")
 				return
 			}
 			if task.Blocked || (from != "in_progress" && from != "review") {
-				errorJSON(w, http.StatusConflict, "орёл: выберите незаблокированную задачу в работе или на ревью")
+				errorJSON(w, http.StatusConflict, "Орёл: выберите незаблокированную задачу в работе или на ревью")
 				return
 			}
 			task.Blocked = true
 			prog.HeadsBlockDone = true
-			s.appendLog(g, "drag", "Игрок "+player.Nickname+" заблокировал "+task.ID+" (heads).")
+			s.appendLog(g, "drag", "Игрок "+player.Nickname+" заблокировал "+task.ID+" (орёл).")
 		} else if !prog.HeadsStartDone {
 			if from != "ready" || to != "in_progress" {
-				errorJSON(w, http.StatusConflict, "орёл: возьмите новую задачу (готово → в работе)")
+				errorJSON(w, http.StatusConflict, "Орёл: возьмите новую задачу")
 				return
 			}
 			if task.Blocked {
-				errorJSON(w, http.StatusConflict, "нельзя взять заблокированную задачу")
+				errorJSON(w, http.StatusConflict, "Нельзя взять заблокированную задачу")
 				return
 			}
 			if !s.moveTaskToStage(g, team, task, to) {
-				errorJSON(w, http.StatusConflict, "задачу нельзя переместить")
+				errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
 				return
 			}
 			task.OwnerID = player.ID
 			prog.HeadsStartDone = true
-			s.appendLog(g, "drag", "Игрок "+player.Nickname+" начал новую задачу "+task.ID+" (heads).")
+			s.appendLog(g, "drag", "Игрок "+player.Nickname+" начал новую задачу "+task.ID+" (орёл).")
 		} else {
-			errorJSON(w, http.StatusConflict, "действия для орла на этот день уже выполнены")
+			errorJSON(w, http.StatusConflict, "Действия для орла на этот день уже выполнены")
 			return
 		}
 
@@ -1466,17 +1465,17 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 func (s *Server) handleSetWIP(w http.ResponseWriter, r *http.Request, code string) {
 	var req setWIPRequest
 	if err := parseJSONOrForm(r, &req); err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	req.PlayerID = strings.TrimSpace(req.PlayerID)
 	req.TeamID = strings.TrimSpace(req.TeamID)
 	if req.PlayerID == "" || req.TeamID == "" {
-		errorJSON(w, http.StatusBadRequest, "не указаны идентификатор игрока или команды")
+		errorJSON(w, http.StatusBadRequest, "Не указаны идентификатор игрока или команды")
 		return
 	}
 	if req.WIPLimit < 1 || req.WIPLimit > 10 {
-		errorJSON(w, http.StatusBadRequest, "лимит WIP должен быть от 1 до 10")
+		errorJSON(w, http.StatusBadRequest, "Лимит WIP должен быть от 1 до 10")
 		return
 	}
 
@@ -1484,7 +1483,7 @@ func (s *Server) handleSetWIP(w http.ResponseWriter, r *http.Request, code strin
 	g, ok := s.findGame(code)
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
@@ -1494,17 +1493,23 @@ func (s *Server) handleSetWIP(w http.ResponseWriter, r *http.Request, code strin
 	}
 	if g.Phase != "retro" {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "лимит WIP можно менять только на ретро")
+		errorJSON(w, http.StatusConflict, "Лимит WIP можно менять только на ретро")
 		return
 	}
 	team, ok := g.Teams[req.TeamID]
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "команда не найдена")
+		errorJSON(w, http.StatusNotFound, "Команда не найдена")
 		return
 	}
+	if team.WIPLimit == req.WIPLimit {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusNotFound, "WIP лимит остался таким же")
+		return
+	}
+	oldLimit := team.WIPLimit
 	team.WIPLimit = req.WIPLimit
-	s.appendLog(g, "retro", "Изменен WIP лимит команды "+team.Name+" -> "+strconv.Itoa(req.WIPLimit))
+	s.appendLog(g, "retro", "Изменен WIP лимит команды "+team.Name+": "+strconv.Itoa(oldLimit)+" -> "+strconv.Itoa(req.WIPLimit))
 	state := stateFromGame(g)
 	s.mu.Unlock()
 
@@ -1515,12 +1520,12 @@ func (s *Server) handleSetWIP(w http.ResponseWriter, r *http.Request, code strin
 func (s *Server) handleContinueAfterRetro(w http.ResponseWriter, r *http.Request, code string) {
 	var req playerActionRequest
 	if err := parseJSONOrForm(r, &req); err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	req.PlayerID = strings.TrimSpace(req.PlayerID)
 	if req.PlayerID == "" {
-		errorJSON(w, http.StatusBadRequest, "не указан идентификатор игрока")
+		errorJSON(w, http.StatusBadRequest, "Не указан идентификатор игрока")
 		return
 	}
 
@@ -1528,7 +1533,7 @@ func (s *Server) handleContinueAfterRetro(w http.ResponseWriter, r *http.Request
 	g, ok := s.findGame(code)
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
@@ -1538,7 +1543,7 @@ func (s *Server) handleContinueAfterRetro(w http.ResponseWriter, r *http.Request
 	}
 	if g.Phase != "retro" {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "сейчас не фаза ретро")
+		errorJSON(w, http.StatusConflict, "Сейчас не фаза ретро")
 		return
 	}
 
@@ -1556,12 +1561,12 @@ func (s *Server) handleContinueAfterRetro(w http.ResponseWriter, r *http.Request
 func (s *Server) handleSkipTurn(w http.ResponseWriter, r *http.Request, code string) {
 	var req playerActionRequest
 	if err := parseJSONOrForm(r, &req); err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	req.PlayerID = strings.TrimSpace(req.PlayerID)
 	if req.PlayerID == "" {
-		errorJSON(w, http.StatusBadRequest, "не указан идентификатор игрока")
+		errorJSON(w, http.StatusBadRequest, "Не указан идентификатор игрока")
 		return
 	}
 
@@ -1570,7 +1575,7 @@ func (s *Server) handleSkipTurn(w http.ResponseWriter, r *http.Request, code str
 	g, ok := s.findGame(code)
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
@@ -1580,22 +1585,22 @@ func (s *Server) handleSkipTurn(w http.ResponseWriter, r *http.Request, code str
 	}
 	if !g.Started {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "игра ещё не начата")
+		errorJSON(w, http.StatusConflict, "Игра ещё не начата")
 		return
 	}
 	if g.Finished {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "игра уже завершена")
+		errorJSON(w, http.StatusConflict, "Игра уже завершена")
 		return
 	}
 	if g.Phase != "running" {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "пропуск хода возможен только в игровой фазе")
+		errorJSON(w, http.StatusConflict, "Пропуск хода возможен только в игровой фазе")
 		return
 	}
 	if len(g.TeamOrder) == 0 {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "в игре нет команд")
+		errorJSON(w, http.StatusConflict, "В игре нет команд")
 		return
 	}
 
@@ -1618,13 +1623,13 @@ func (s *Server) handleSkipTurn(w http.ResponseWriter, r *http.Request, code str
 func (s *Server) handleGameRoutes(w http.ResponseWriter, r *http.Request) {
 	rest := splitPathAfter("/api/game", r.URL.Path)
 	if rest == "" {
-		errorJSON(w, http.StatusNotFound, "не найдено")
+		errorJSON(w, http.StatusNotFound, "Не найдено")
 		return
 	}
 	parts := strings.Split(rest, "/")
 	code := strings.TrimSpace(parts[0])
 	if code == "" {
-		errorJSON(w, http.StatusBadRequest, "не указан код игры")
+		errorJSON(w, http.StatusBadRequest, "Не указан код игры")
 		return
 	}
 
@@ -1658,7 +1663,7 @@ func (s *Server) handleGameRoutes(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	errorJSON(w, http.StatusNotFound, "не найдено")
+	errorJSON(w, http.StatusNotFound, "Не найдено")
 }
 
 func main() {
@@ -1679,7 +1684,7 @@ func main() {
 func (s *Server) handleNextDay(w http.ResponseWriter, r *http.Request, code string) {
 	var req playerActionRequest
 	if err := parseJSONOrForm(r, &req); err != nil {
-		errorJSON(w, http.StatusBadRequest, "некорректный запрос")
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	req.PlayerID = strings.TrimSpace(req.PlayerID)
@@ -1688,7 +1693,7 @@ func (s *Server) handleNextDay(w http.ResponseWriter, r *http.Request, code stri
 	g, ok := s.findGame(code)
 	if !ok {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "игра не найдена")
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
 		return
 	}
 	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
@@ -1699,12 +1704,12 @@ func (s *Server) handleNextDay(w http.ResponseWriter, r *http.Request, code stri
 
 	if g.Phase != "running" {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "сейчас не игровая фаза")
+		errorJSON(w, http.StatusConflict, "Сейчас не игровая фаза")
 		return
 	}
 	if !allPlayersDone(g) {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "нельзя начать новый день: не все игроки завершили действия")
+		errorJSON(w, http.StatusConflict, "Нельзя начать новый день: не все игроки завершили действия")
 		return
 	}
 

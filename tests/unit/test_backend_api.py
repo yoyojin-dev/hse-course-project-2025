@@ -90,7 +90,7 @@ def test_join_redirect_empty_code_returns_400(api_client, content_type):
         error_msg = data["error"]
 
     assert status == 400
-    assert error_msg == "укажите код игры"
+    assert error_msg == "Укажите код игры"
 
 
 def test_join_redirect_get_method_not_allowed(api_client):
@@ -145,7 +145,7 @@ def test_join_unknown_team_is_rejected(api_client):
         allow_error=True,
     )
     assert status == 400
-    assert data["error"] == "неизвестная команда"
+    assert data["error"] == "Неизвестная команда"
 
 
 def test_join_unknown_game_returns_404(api_client):
@@ -155,7 +155,7 @@ def test_join_unknown_game_returns_404(api_client):
         allow_error=True,
     )
     assert status == 404
-    assert data["error"] == "игра не найдена"
+    assert data["error"] == "Игра не найдена"
 
 
 def test_join_after_started_returns_409(api_client):
@@ -176,7 +176,7 @@ def test_join_after_started_returns_409(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "игра уже началась"
+    assert data["error"] == "Игра уже началась"
 
 
 def test_join_fills_team_to_max_then_rejects_sixth(api_client):
@@ -190,7 +190,7 @@ def test_join_fills_team_to_max_then_rejects_sixth(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "команда заполнена (не более 5 участников)"
+    assert data["error"] == "Команда заполнена (не более 5 участников)"
 
 
 def test_join_missing_fields_returns_400(api_client):
@@ -258,7 +258,7 @@ def test_start_project_unknown_id_returns_404(api_client):
         allow_error=True,
     )
     assert status == 404
-    assert data["error"] == "проект не найден"
+    assert data["error"] == "Проект не найден"
 
 
 def test_start_project_already_started_returns_409(api_client):
@@ -276,7 +276,7 @@ def test_start_project_already_started_returns_409(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "проект уже запущен"
+    assert data["error"] == "Проект уже запущен"
 
 
 def test_start_project_blocked_when_all_ready_columns_full(api_client):
@@ -298,7 +298,7 @@ def test_start_project_blocked_when_all_ready_columns_full(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "новый проект можно добавить только если колонка «Сделать» пуста хотя бы у одной команды"
+    assert data["error"] == "Новый проект можно добавить только если колонка «Сделать» пуста хотя бы у одной команды"
 
 
 def test_start_game_rejects_if_not_all_teams_have_players(api_client):
@@ -318,7 +318,7 @@ def test_start_game_rejects_if_not_all_teams_have_players(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "в каждой команде должен быть хотя бы один игрок"
+    assert data["error"] == "В каждой команде должен быть хотя бы один игрок"
 
 
 def test_start_game_requires_started_project(api_client):
@@ -333,7 +333,7 @@ def test_start_game_requires_started_project(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "сначала запустите хотя бы один проект"
+    assert data["error"] == "Сначала запустите хотя бы один проект"
 
 
 def test_start_game_forbidden_for_non_facilitator(api_client):
@@ -365,7 +365,7 @@ def test_start_game_unknown_code_returns_404(api_client):
         allow_error=True,
     )
     assert status == 404
-    assert data["error"] == "игра не найдена"
+    assert data["error"] == "Игра не найдена"
 
 
 def test_start_game_twice_returns_409(api_client):
@@ -387,7 +387,7 @@ def test_start_game_twice_returns_409(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "игра уже началась"
+    assert data["error"] == "Игра уже началась"
 
 
 def test_start_game_missing_player_id_returns_400(api_client):
@@ -404,7 +404,7 @@ def test_start_game_missing_player_id_returns_400(api_client):
         allow_error=True,
     )
     assert status == 400
-    assert data["error"] == "не указан идентификатор игрока"
+    assert data["error"] == "Не указан идентификатор игрока"
 
 
 def test_drag_rejects_task_from_another_team(api_client):
@@ -434,7 +434,7 @@ def test_drag_rejects_task_from_another_team(api_client):
         allow_error=True,
     )
     assert status == 403
-    assert data["error"] == "задача принадлежит другой команде"
+    assert data["error"] == "Задача принадлежит другой команде"
 
 
 def test_drag_rejects_unknown_task(api_client):
@@ -457,7 +457,7 @@ def test_drag_rejects_unknown_task(api_client):
         allow_error=True,
     )
     assert status == 404
-    assert data["error"] == "задача не найдена"
+    assert data["error"] == "Задача не найдена"
 
 
 def test_drag_by_facilitator_is_forbidden(api_client):
@@ -480,7 +480,7 @@ def test_drag_by_facilitator_is_forbidden(api_client):
         allow_error=True,
     )
     assert status == 403
-    assert data["error"] == "ведущий не может двигать карточки"
+    assert data["error"] == "Ведущий не может двигать карточки"
 
 
 def test_drag_before_game_started(api_client):
@@ -499,7 +499,7 @@ def test_drag_before_game_started(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "игра ещё не начата"
+    assert data["error"] == "Игра ещё не начата"
 
 
 def test_drag_in_retro_phase(api_client):
@@ -523,7 +523,7 @@ def test_drag_in_retro_phase(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "ходы разрешены только в игровой фазе"
+    assert data["error"] == "Ходы разрешены только в игровой фазе"
 
 
 def test_drag_unknown_player_id(api_client):
@@ -546,7 +546,7 @@ def test_drag_unknown_player_id(api_client):
         allow_error=True,
     )
     assert status == 403
-    assert data["error"] == "игрок не в этой игре"
+    assert data["error"] == "Игрок не в этой игре"
 
 
 def test_drag_after_finished_returns_409(api_client):
@@ -582,7 +582,7 @@ def test_drag_after_finished_returns_409(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "игра уже завершена"
+    assert data["error"] == "Игра уже завершена"
 
 
 def test_next_day_requires_all_teams_done(api_client):
@@ -595,7 +595,7 @@ def test_next_day_requires_all_teams_done(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "нельзя начать новый день: не все игроки завершили действия"
+    assert data["error"] == "Нельзя начать новый день: не все игроки завершили действия"
 
 
 def test_skip_turn_then_next_day_advances_day_counter(api_client):
@@ -629,7 +629,7 @@ def test_set_wip_rejected_outside_retro(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "лимит WIP можно менять только на ретро"
+    assert data["error"] == "Лимит WIP можно менять только на ретро"
 
 
 def test_set_wip_validates_range(api_client):
@@ -644,7 +644,7 @@ def test_set_wip_validates_range(api_client):
         allow_error=True,
     )
     assert status == 400
-    assert data["error"] == "лимит WIP должен быть от 1 до 10"
+    assert data["error"] == "Лимит WIP должен быть от 1 до 10"
 
 
 def test_set_wip_updates_team_during_retro(api_client):
