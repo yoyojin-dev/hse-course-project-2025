@@ -1436,7 +1436,7 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 			}
 			task.OwnerID = player.ID
 			prog.HeadsStartDone = true
-			s.appendLog(g, "drag", "Игрок "+player.Nickname+" начал новую задачу "+task.ID+" (heads).")
+			s.appendLog(g, "drag", "Игрок "+player.Nickname+" начал новую задачу "+task.ID+" (орёл).")
 		} else {
 			errorJSON(w, http.StatusConflict, "Действия для орла на этот день уже выполнены")
 			return
