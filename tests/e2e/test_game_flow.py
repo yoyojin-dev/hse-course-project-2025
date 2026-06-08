@@ -113,7 +113,7 @@ def test_permissions_and_phase_guards_during_running_game(api_client):
         allow_error=True,
     )
     assert status == 409
-    assert data["error"] == "лимит WIP можно менять только на ретро"
+    assert data["error"] == "Лимит WIP можно менять только на ретро"
 
     status, state, _ = api_client.json("GET", f"/api/game/{code}")
     assert status == 200
@@ -127,7 +127,7 @@ def test_permissions_and_phase_guards_during_running_game(api_client):
         allow_error=True,
     )
     assert status == 403
-    assert data["error"] == "задача принадлежит другой команде"
+    assert data["error"] == "Задача принадлежит другой команде"
 
     for _ in range(2):
         status, _, _ = api_client.json(
