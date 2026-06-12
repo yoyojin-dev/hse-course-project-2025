@@ -310,8 +310,7 @@ const GamePage: React.FC = () => {
 
   const metaLine = useMemo(() => {
     if (!state) return '';
-    const coinMeta = playerRecord?.current_coin ? `, монетка: ${playerRecord.current_coin}` : '';
-    return `День ${state.current_day} из ${state.max_days}, завершено проектов: ${state.projects_done}/${state.projects?.length || 0}, циклов ретро: ${state.cycles_completed}${coinMeta}`;
+    return `День ${state.current_day} | Завершено проектов: ${state.projects_done}/${state.projects?.length || 0} | Циклов ретро: ${state.cycles_completed}`;
   }, [state, playerRecord]);
   const myActionsHint = useMemo(() => {
     if (!myTeam || state?.phase !== 'running') return '';
@@ -660,7 +659,7 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
             <button
               className="btn"
               type="button"
-              disabled={busy || !allPlayersDone}
+              disabled={busy}
               onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/next_day`, { player_id: playerId }, nextDayStartsRetro ? 'Ретро началось.' : 'Новый день начался. Монетки брошены.')}
             >
               {nextDayStartsRetro ? 'Начать ретро' : 'Начать новый день'}
