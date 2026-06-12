@@ -585,17 +585,18 @@ def test_drag_after_finished_returns_409(api_client):
     assert data["error"] == "Игра уже завершена"
 
 
-def test_next_day_requires_all_teams_done(api_client):
-    code, facilitator_id, _ = start_running_game(api_client)
+def test_next_day_without_all_teams_done_advances_day(api_client):
+    code, facilitator_id, state = start_running_game(api_client)
+    assert state["current_day"] == 1
 
-    status, data, _ = api_client.json(
+    status, next_state, _ = api_client.json(
         "POST",
         f"/api/game/{code}/next_day",
         {"player_id": facilitator_id},
-        allow_error=True,
     )
-    assert status == 409
-    assert data["error"] == "Нельзя начать новый день: не все игроки завершили действия"
+    assert status == 200
+    assert next_state["current_day"] == 2
+    assert next_state["phase"] == "running"
 
 
 def test_skip_turn_then_next_day_advances_day_counter(api_client):

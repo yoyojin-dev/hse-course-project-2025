@@ -839,22 +839,6 @@ func hasReadyStartTask(g *Game, team *Team) bool {
 	return false
 }
 
-func allPlayersDone(g *Game) bool {
-	for _, tid := range g.TeamOrder {
-		team := g.Teams[tid]
-		for _, pid := range team.Members {
-			p, ok := g.Players[pid]
-			if !ok || p.Role != "player" {
-				continue
-			}
-			if !g.TurnActionDone[pid] {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 func (s *Server) advanceTurn(g *Game, playerID ...string) {
 	if g.TurnActionDone == nil {
 		g.TurnActionDone = make(map[string]bool)
@@ -1705,11 +1689,6 @@ func (s *Server) handleNextDay(w http.ResponseWriter, r *http.Request, code stri
 	if g.Phase != "running" {
 		s.mu.Unlock()
 		errorJSON(w, http.StatusConflict, "Сейчас не игровая фаза")
-		return
-	}
-	if !allPlayersDone(g) {
-		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "Нельзя начать новый день: не все игроки завершили действия")
 		return
 	}
 
