@@ -56,6 +56,8 @@ export type GameState = {
   max_days: number;
   projects_done: number;
   cycles_completed: number;
+  last_retro_day?: number;
+  next_day_is_retro?: boolean;
   phase: string;
   turn_action_done?: Record<string, boolean>;
   started?: boolean;

@@ -41,6 +41,64 @@ function ownerLabel(team: Team, ownerId?: string): string {
   return member?.nickname || ownerId;
 }
 
+type CoinIconProps = {
+  coin?: string;
+};
+
+const CoinIcon: React.FC<CoinIconProps> = ({ coin }) => {
+  if (coin === 'heads') {
+    return (
+      <img
+        src="/coins/heads.png"
+        srcSet="/coins/heads@2x.png 2x"
+        width={30}
+        height={30}
+        alt="Орёл"
+        className="coin-icon coin-icon-heads"
+        title="Орёл"
+      />
+    );
+  }
+  if (coin === 'tails') {
+    return (
+      <img
+        src="/coins/tails.png"
+        srcSet="/coins/tails@2x.png 2x"
+        width={28}
+        height={28}
+        alt="Решка"
+        className="coin-icon"
+        title="Решка"
+      />
+    );
+  }
+  return null;
+};
+
+type TeamMembersProps = {
+  members: Member[];
+};
+
+const TeamMembers: React.FC<TeamMembersProps> = ({ members }) => {
+  const players = members.filter((m) => m.role !== 'facilitator');
+  if (!players.length) {
+    return <span className="help">Участники: —</span>;
+  }
+  return (
+    <div className="team-members">
+      <span className="team-members-label">Участники:</span>
+      <div className="team-members-list">
+        {players.map((member) => (
+          <span key={member.id} className="team-member-item">
+            <span className="team-member-name">{member.nickname}</span>
+            <CoinIcon coin={member.current_coin} />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 type ProjectKanbanProps = {
   teams: Team[];
   projects: Project[];
@@ -113,7 +171,7 @@ const ProjectKanban: React.FC<ProjectKanbanProps> = ({ teams, projects }) => {
     <div className="project-kanban">
       <div className="project-kanban-cols">
         <div className="project-kanban-col">
-          <h3>Сделать</h3>
+          <h3>В процессе</h3>
           {colTodo.length === 0 && <div className="col-empty">Пусто</div>}
           {colTodo.map((p) => renderCard(p, 'todo'))}
         </div>
@@ -175,14 +233,13 @@ const GamePage: React.FC = () => {
     try {
       const data = await getJson<GameState>(`/api/game/${encodeURIComponent(gamecode)}`);
       setState(data);
-      if (!silent) setStatusMessage('Состояние обновлено.', 'ok');
     } catch (err) {
       if (!silent) setStatusMessage('Сервер недоступен.', 'err');
     }
   }, [gamecode]);
 
   useEffect(() => {
-    loadState(false);
+    loadState(true);
     if (wsConnected) {
       return () => undefined;
     }
@@ -248,7 +305,11 @@ const GamePage: React.FC = () => {
       });
       setState(data);
       setFlashTaskId(drag.taskId);
-      setStatusMessage('Карточка перемещена.', 'ok');
+      if (isFacilitator) {
+        setStatusMessage('Карточка перемещена.', 'ok');
+      } else {
+        setStatusMessage('', '');
+      }
       window.setTimeout(() => setFlashTaskId(''), 550);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ошибка перемещения.';
@@ -270,7 +331,11 @@ const GamePage: React.FC = () => {
       });
       setState(data);
       setFlashTaskId(task.id);
-      setStatusMessage('Статус блокировки обновлен.', 'ok');
+      if (isFacilitator) {
+        setStatusMessage('Статус блокировки обновлен.', 'ok');
+      } else {
+        setStatusMessage('', '');
+      }
       window.setTimeout(() => setFlashTaskId(''), 550);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ошибка обновления.';
@@ -362,7 +427,7 @@ const GamePage: React.FC = () => {
           <div className="card">
             <h2 style={{ marginTop: 0 }}>{isFacilitator ? "Командные доски" : "Доска задач"}</h2>
             {!isFacilitator && myActionsHint && (
-              <div className="help" style={{ marginTop: 8 }}>
+              <div className="player-actions-hint">
                 <strong>Доступные действия:</strong> {myActionsHint}
               </div>
             )}
@@ -381,9 +446,7 @@ const GamePage: React.FC = () => {
                   </span>
                   <span className="help">WIP={team.wip_limit}, участников: {(team.members || []).length}</span>
                 </div>
-                <div className="help" style={{ marginTop: 6 }}>
-                  Участники: {(team.members || []).map((m) => m.nickname).join(', ')}
-                </div>
+                <TeamMembers members={team.members || []} />
                 <div className="columns" style={{ marginTop: 10 }}>
                   {STAGES.map((stage) => (
                     <div
@@ -559,10 +622,14 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
     [state.teams]
   );
 
-  const nextDayStartsRetro = useMemo(
-    () => state.phase === 'running' && state.current_day > 0 && state.current_day % 5 === 0,
-    [state.phase, state.current_day]
-  );
+  const nextDayIsRetro = !!state.next_day_is_retro;
+  const joinLink = useMemo(() => {
+    const path = `/joining/${encodeURIComponent(gamecode)}`;
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}${path}`;
+    }
+    return path;
+  }, [gamecode]);
 
   const launchableProjects = useMemo(
     () => (state.projects || []).filter((p) => !p.started && !p.completed),
@@ -601,16 +668,24 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
   return (
     <div className="stack">
       {!state.started && (
-        <div className="actions">
-          <button
-            className="btn"
-            type="button"
-            disabled={busy}
-            onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/start`, { player_id: playerId }, 'Игра запущена.')}
-          >
-            Старт игры
-          </button>
-        </div>
+        <>
+          <div className="facilitator-join-link">
+            <span className="help">Ссылка для участников:</span>
+            <a className="facilitator-join-url" href={joinLink}>
+              {joinLink}
+            </a>
+          </div>
+          <div className="actions">
+            <button
+              className="btn"
+              type="button"
+              disabled={busy}
+              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/start`, { player_id: playerId }, 'Игра запущена.')}
+            >
+              Старт игры
+            </button>
+          </div>
+        </>
       )}
 
       <div className="actions project-launch-actions">
@@ -655,18 +730,35 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
 
       {state.started && state.phase === 'running' && (
         <div className="actions">
-          <div className="facilitator-next-day">
+          <div className="facilitator-day-controls">
+            {!nextDayIsRetro && (
+              <>
+                <button
+                  className="btn facilitator-day-btn"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/next_day`, { player_id: playerId }, 'Новый день начался. Монетки брошены.')}
+                >
+                  Начать новый день
+                </button>
+                <span className="help facilitator-next-day-hint">
+                  {allPlayersDone ? 'Все игроки завершили действия.' : `Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
+                </span>
+              </>
+            )}
             <button
-              className="btn"
+              className="btn retro facilitator-day-btn"
               type="button"
               disabled={busy}
-              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/next_day`, { player_id: playerId }, nextDayStartsRetro ? 'Ретро началось.' : 'Новый день начался. Монетки брошены.')}
+              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/start_retro`, { player_id: playerId }, 'Ретро началось.')}
             >
-              {nextDayStartsRetro ? 'Начать ретро' : 'Начать новый день'}
+              Начать ретро
             </button>
-            <span className="help facilitator-next-day-hint">
-              {allPlayersDone ? 'Все игроки завершили действия.' : `Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
-            </span>
+            {nextDayIsRetro && (
+              <span className="help facilitator-next-day-hint">
+                {allPlayersDone ? 'По расписанию наступило ретро.' : `По расписанию ретро. Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
+              </span>
+            )}
           </div>
         </div>
       )}

@@ -83,6 +83,7 @@ type Game struct {
 	CurrentDay      int                     `json:"current_day"`
 	MaxDays         int                     `json:"max_days"`
 	CyclesCompleted int                     `json:"cycles_completed"`
+	LastRetroDay    int                     `json:"-"`
 	ProjectsDone    int                     `json:"projects_done"`
 	Projects        map[string]*ProjectCard `json:"-"`
 	ProjectOrder    []string                `json:"-"`
@@ -152,6 +153,8 @@ type stateResponse struct {
 	CurrentTurnTeamID   string         `json:"current_turn_team_id,omitempty"`
 	CurrentTurnTeamName string         `json:"current_turn_team_name,omitempty"`
 	CyclesCompleted     int            `json:"cycles_completed"`
+	LastRetroDay        int            `json:"last_retro_day,omitempty"`
+	NextDayIsRetro      bool           `json:"next_day_is_retro,omitempty"`
 	ProjectsDone        int            `json:"projects_done"`
 	TurnActionDone      map[string]bool `json:"turn_action_done,omitempty"`
 	FacilitatorID       string         `json:"facilitator_id"`
@@ -460,6 +463,8 @@ func stateFromGame(g *Game) stateResponse {
 		CurrentTurnTeamName: turnTeamName,
 		TurnActionDone:      g.TurnActionDone,
 		CyclesCompleted:     g.CyclesCompleted,
+		LastRetroDay:        g.LastRetroDay,
+		NextDayIsRetro:      nextDayWouldBeRetro(g),
 		ProjectsDone:        g.ProjectsDone,
 		FacilitatorID:       g.FacilitatorID,
 		Teams:               teams,
@@ -658,22 +663,42 @@ func (s *Server) rollCoinsForPlayers(g *Game) {
 	s.autoCompleteIdlePlayers(g)
 }
 
-func (s *Server) closeDayAndAdvance(g *Game) {
-	if g.CurrentDay >= g.MaxDays {
-		g.Finished = true
-		g.Phase = "finished"
-		s.appendLog(g, "finish", "Игра завершена: достигнут лимит игровых дней.")
-		return
+func nextDayWouldBeRetro(g *Game) bool {
+	nextDay := g.CurrentDay + 1
+	if g.LastRetroDay <= 0 {
+		return nextDay >= 5
 	}
+	return nextDay >= g.LastRetroDay+5
+}
 
+func retroDueOnDay(g *Game, day int) bool {
+	if g.LastRetroDay <= 0 {
+		return day >= 5
+	}
+	return day >= g.LastRetroDay+5
+}
+
+func (s *Server) beginRetroPhase(g *Game) {
+	g.Phase = "retro"
+	g.LastRetroDay = g.CurrentDay
+	g.CyclesCompleted++
+	s.appendLog(g, "retro", "Ретро-фаза: обсудите улучшения и при необходимости измените WIP лимиты.")
+}
+
+func (s *Server) closeDayAndEnterRetro(g *Game) {
+	g.CurrentDay++
+	s.tickProjectIntegrationDays(g)
+	s.resetDayProgress(g)
+	s.beginRetroPhase(g)
+}
+
+func (s *Server) closeDayAndAdvance(g *Game) {
 	g.CurrentDay++
 	s.tickProjectIntegrationDays(g)
 	s.resetDayProgress(g)
 
-	if (g.CurrentDay-1)%5 == 0 {
-		g.Phase = "retro"
-		g.CyclesCompleted++
-		s.appendLog(g, "retro", "Ретро-фаза: обсудите улучшения и при необходимости измените WIP лимиты.")
+	if retroDueOnDay(g, g.CurrentDay) {
+		s.beginRetroPhase(g)
 		return
 	}
 
@@ -987,15 +1012,15 @@ func (s *Server) handleCreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := createRequest{TeamNames: []string{"Синяя", "Зеленая", "Желтая", "Красная"}, MaxDays: 15}
+	req := createRequest{TeamNames: []string{"Синяя", "Зеленая", "Желтая", "Красная"}, MaxDays: 0}
 	if requestExpectsJSON(r) {
 		_ = parseJSONOrForm(r, &req)
 	}
 	if len(req.TeamNames) < 1 {
 		req.TeamNames = []string{"Синяя", "Зеленая", "Желтая", "Красная"}
 	}
-	if req.MaxDays < 5 {
-		req.MaxDays = 15
+	if req.MaxDays < 0 {
+		req.MaxDays = 0
 	}
 
 	code := nextGameCode()
@@ -1641,6 +1666,9 @@ func (s *Server) handleGameRoutes(w http.ResponseWriter, r *http.Request) {
 		case "next_day":
 			s.handleNextDay(w, r, code)
 			return
+		case "start_retro":
+			s.handleStartRetro(w, r, code)
+			return
 		case "skip_turn":
 			s.handleSkipTurn(w, r, code)
 			return
@@ -1691,8 +1719,47 @@ func (s *Server) handleNextDay(w http.ResponseWriter, r *http.Request, code stri
 		errorJSON(w, http.StatusConflict, "Сейчас не игровая фаза")
 		return
 	}
+	if nextDayWouldBeRetro(g) {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusConflict, "Следующий день — ретро. Используйте кнопку «Начать ретро».")
+		return
+	}
 
 	s.closeDayAndAdvance(g)
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
+}
+
+func (s *Server) handleStartRetro(w http.ResponseWriter, r *http.Request, code string) {
+	var req playerActionRequest
+	if err := parseJSONOrForm(r, &req); err != nil {
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
+		return
+	}
+	req.PlayerID = strings.TrimSpace(req.PlayerID)
+
+	s.mu.Lock()
+	g, ok := s.findGame(code)
+	if !ok {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
+		return
+	}
+	if err := s.requireFacilitator(g, req.PlayerID); err != nil {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusForbidden, err.Error())
+		return
+	}
+	if g.Phase != "running" {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusConflict, "Ретро можно начать только в игровой фазе")
+		return
+	}
+
+	s.closeDayAndEnterRetro(g)
 	state := stateFromGame(g)
 	s.mu.Unlock()
 
