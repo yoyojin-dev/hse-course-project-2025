@@ -991,6 +991,49 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
           </div>
         </div>
       )}
+    {isFacilitatorPanel && state.started && state.metrics && (
+        <div className="metrics-panel">
+          <h2>Игровые метрики</h2>
+          <div className="metrics-grid">
+            <div className="metric-card">
+              <span className="metric-title">Lead Time (Ср. дней)</span>
+              <span className="metric-value">{state.metrics.lead_time.toFixed(1)}</span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-title">Velocity (Задач в день)</span>
+              <span className="metric-value">{state.metrics.velocity.toFixed(1)}</span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-title">WIP (В работе)</span>
+              <span className="metric-value">{state.metrics.wip}</span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-title">Blocked (Ожидают)</span>
+              <span className="metric-value">{state.metrics.blocked}</span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-title">Ретро проведены</span>
+              <span className="metric-value">{state.metrics.retro_days}</span>
+            </div>
+          </div>
+          <div className="metrics-cfd">
+            <h3>CFD (Текущий статус)</h3>
+            <div className="cfd-row">
+              <span className="cfd-label">Ready:</span> <span className="cfd-val">{state.metrics.cfd?.ready || 0}</span>
+            </div>
+            <div className="cfd-row">
+              <span className="cfd-label">In Progress:</span> <span className="cfd-val">{state.metrics.cfd?.in_progress || 0}</span>
+            </div>
+            <div className="cfd-row">
+              <span className="cfd-label">Review:</span> <span className="cfd-val">{state.metrics.cfd?.review || 0}</span>
+            </div>
+            <div className="cfd-row">
+              <span className="cfd-label">Done:</span> <span className="cfd-val">{state.metrics.cfd?.done || 0}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
