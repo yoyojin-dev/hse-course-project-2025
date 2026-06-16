@@ -802,16 +802,9 @@ const GamePage: React.FC = () => {
                   <div className="metric-card">
                     <span className="metric-title metric-tooltip-wrapper">
                       Blocked (Ожидают)
-                      <span className="metric-tooltip-text">Текущее количество заблокированных задач (с красными жетонами).</span>
+                      <span className="metric-tooltip-text">Текущее количество заблокированных задач.</span>
                     </span>
                     <span className="metric-value">{state.metrics.blocked}</span>
-                  </div>
-                  <div className="metric-card">
-                    <span className="metric-title metric-tooltip-wrapper">
-                      Ретро проведены
-                      <span className="metric-tooltip-text">Сколько раз с начала игры проводились встречи ретроспективы.</span>
-                    </span>
-                    <span className="metric-value">{state.metrics.retro_days}</span>
                   </div>
                   <div className="metric-card">
                     <span className="metric-title metric-tooltip-wrapper">
