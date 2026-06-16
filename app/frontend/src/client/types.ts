@@ -60,6 +60,8 @@ export type GameMetrics = {
   velocity: number;
   total_blocked_days: number;
   total_penalties: number;
+  avg_task_cycle_time: number;
+  last_retro_throughput: number;
 };
 
 export type GameState = {

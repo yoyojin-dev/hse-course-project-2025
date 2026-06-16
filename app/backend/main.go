@@ -33,9 +33,11 @@ type Task struct {
 	ProjectID string `json:"project_id"`
 	TeamID    string `json:"team_id"`
 	Stage     string `json:"stage"`
-	Blocked   bool   `json:"blocked"`
-	OwnerID   string `json:"owner_id,omitempty"`
-	Penalty   bool   `json:"penalty,omitempty"`
+	Blocked    bool   `json:"blocked"`
+	OwnerID    string `json:"owner_id,omitempty"`
+	Penalty    bool   `json:"penalty,omitempty"`
+	StartedDay int    `json:"started_day,omitempty"`
+	DoneDay    int    `json:"done_day,omitempty"`
 }
 
 type Team struct {
@@ -98,8 +100,10 @@ type Game struct {
 	FacilitatorID     string                        `json:"facilitator_id"`
 	TurnActionDone    map[string]bool               `json:"-"`
 	PlayerDayProgress map[string]*playerDayProgress `json:"-"`
-	TotalBlockedDays  int                           `json:"-"`
-	History           []LogEntry                    `json:"history"`
+	TotalBlockedDays       int                           `json:"-"`
+	TasksDoneThisIteration int                           `json:"-"`
+	LastRetroThroughput    int                           `json:"-"`
+	History                []LogEntry                    `json:"history"`
 }
 
 type Server struct {
@@ -156,8 +160,10 @@ type GameMetrics struct {
 	Blocked          int            `json:"blocked"`
 	RetroDays        int            `json:"retro_days"`
 	Velocity         float64        `json:"velocity"`
-	TotalBlockedDays int            `json:"total_blocked_days"`
-	TotalPenalties   int            `json:"total_penalties"`
+	TotalBlockedDays    int            `json:"total_blocked_days"`
+	TotalPenalties      int            `json:"total_penalties"`
+	AvgTaskCycleTime    float64        `json:"avg_task_cycle_time"`
+	LastRetroThroughput int            `json:"last_retro_throughput"`
 }
 
 type stateResponse struct {
@@ -469,6 +475,19 @@ func calculateMetrics(g *Game) *GameMetrics {
 	m.TotalBlockedDays = g.TotalBlockedDays
 	m.TotalPenalties = penalties
 
+	var totalCycleTime int
+	var doneTasksCount int
+	for _, task := range g.Tasks {
+		if task.Stage == "done" && task.DoneDay >= task.StartedDay && task.StartedDay > 0 {
+			totalCycleTime += (task.DoneDay - task.StartedDay + 1)
+			doneTasksCount++
+		}
+	}
+	if doneTasksCount > 0 {
+		m.AvgTaskCycleTime = float64(totalCycleTime) / float64(doneTasksCount)
+	}
+
+	m.LastRetroThroughput = g.LastRetroThroughput
 	m.RetroDays = g.CyclesCompleted
 	if g.CurrentDay > 0 {
 		var doneTasks int
@@ -773,6 +792,8 @@ func (s *Server) beginRetroPhase(g *Game) {
 	g.Phase = "retro"
 	g.LastRetroDay = g.CurrentDay
 	g.CyclesCompleted++
+	g.LastRetroThroughput = g.TasksDoneThisIteration
+	g.TasksDoneThisIteration = 0
 	s.appendLog(g, "retro", "Ретро-фаза: обсудите улучшения и при необходимости измените WIP лимиты.")
 }
 
@@ -916,7 +937,13 @@ func (s *Server) moveTaskToStage(g *Game, team *Team, task *Task, to string) boo
 	team.Board[to] = append(team.Board[to], task.ID)
 	task.Stage = to
 
+	if to == "in_progress" && task.StartedDay == 0 {
+		task.StartedDay = g.CurrentDay
+	}
+
 	if to == "done" {
+		task.DoneDay = g.CurrentDay
+		g.TasksDoneThisIteration++
 		if p, ok := g.Projects[task.ProjectID]; ok && p.Started {
 			p.DoneTasks++
 			if !p.Completed {

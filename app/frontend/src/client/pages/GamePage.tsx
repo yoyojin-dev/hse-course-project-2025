@@ -805,6 +805,14 @@ const GamePage: React.FC = () => {
                     <span className="metric-title">Штрафы (Суммарно)</span>
                     <span className="metric-value">{state.metrics.total_penalties}</span>
                   </div>
+                  <div className="metric-card" title="Среднее время жизни карточки задачи (от In Progress до Done)">
+                    <span className="metric-title">Cycle Time (Задачи)</span>
+                    <span className="metric-value">{state.metrics.avg_task_cycle_time?.toFixed(1) || '0.0'}</span>
+                  </div>
+                  <div className="metric-card" title="Количество закрытых задач с момента прошлого Ретро">
+                    <span className="metric-title">Throughput (Итерация)</span>
+                    <span className="metric-value">{state.metrics.last_retro_throughput}</span>
+                  </div>
                 </div>
                 <div className="metrics-cfd">
                   <h3>CFD (Текущий статус)</h3>
