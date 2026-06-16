@@ -40,6 +40,7 @@ type Team struct {
 	ID              string              `json:"id"`
 	Name            string              `json:"name"`
 	WIPLimit        int                 `json:"wip_limit"`
+	WIPLimits       map[string]int      `json:"wip_limits,omitempty"`
 	Members         []string            `json:"members"`
 	Board           map[string][]string `json:"-"`
 	CurrentCoin     string              `json:"current_coin,omitempty"`
@@ -76,35 +77,36 @@ type playerDayProgress struct {
 }
 
 type Game struct {
-	Code            string                  `json:"code"`
-	Started         bool                    `json:"started"`
-	Finished        bool                    `json:"finished"`
-	Phase           string                  `json:"phase"`
-	CurrentDay      int                     `json:"current_day"`
-	MaxDays         int                     `json:"max_days"`
-	CyclesCompleted int                     `json:"cycles_completed"`
-	LastRetroDay    int                     `json:"-"`
-	ProjectsDone    int                     `json:"projects_done"`
-	Projects        map[string]*ProjectCard `json:"-"`
-	ProjectOrder    []string                `json:"-"`
-	Teams           map[string]*Team        `json:"-"`
-	TeamOrder       []string                `json:"-"`
-	Players         map[string]*Player      `json:"-"`
-	Tasks           map[string]*Task        `json:"-"`
-	FacilitatorID       string                         `json:"facilitator_id"`
-	TurnActionDone      map[string]bool                `json:"-"`
-	PlayerDayProgress   map[string]*playerDayProgress  `json:"-"`
-	History             []LogEntry                     `json:"history"`
+	Code              string                        `json:"code"`
+	Started           bool                          `json:"started"`
+	Finished          bool                          `json:"finished"`
+	Phase             string                        `json:"phase"`
+	CurrentDay        int                           `json:"current_day"`
+	MaxDays           int                           `json:"max_days"`
+	CyclesCompleted   int                           `json:"cycles_completed"`
+	LastRetroDay      int                           `json:"-"`
+	ProjectsDone      int                           `json:"projects_done"`
+	Projects          map[string]*ProjectCard       `json:"-"`
+	ProjectWIPLimits  map[string]int                `json:"-"`
+	ProjectOrder      []string                      `json:"-"`
+	Teams             map[string]*Team              `json:"-"`
+	TeamOrder         []string                      `json:"-"`
+	Players           map[string]*Player            `json:"-"`
+	Tasks             map[string]*Task              `json:"-"`
+	FacilitatorID     string                        `json:"facilitator_id"`
+	TurnActionDone    map[string]bool               `json:"-"`
+	PlayerDayProgress map[string]*playerDayProgress `json:"-"`
+	History           []LogEntry                    `json:"history"`
 }
 
 type Server struct {
-	mu            sync.RWMutex
-	games         map[string]*Game
-	gameCounter   int64
-	taskCounter   int64
-	rng           *rand.Rand
-	wsMu          sync.Mutex
-	wsGames       map[string]map[*wsClient]struct{}
+	mu          sync.RWMutex
+	games       map[string]*Game
+	gameCounter int64
+	taskCounter int64
+	rng         *rand.Rand
+	wsMu        sync.Mutex
+	wsGames     map[string]map[*wsClient]struct{}
 }
 
 func newServer() *Server {
@@ -119,6 +121,7 @@ type teamState struct {
 	ID              string            `json:"id"`
 	Name            string            `json:"name"`
 	WIPLimit        int               `json:"wip_limit"`
+	WIPLimits       map[string]int    `json:"wip_limits,omitempty"`
 	Members         []Player          `json:"members"`
 	Board           map[string][]Task `json:"board"`
 	Counts          map[string]int    `json:"counts"`
@@ -144,23 +147,24 @@ type projectState struct {
 }
 
 type stateResponse struct {
-	Code                string         `json:"code"`
-	Started             bool           `json:"started"`
-	Finished            bool           `json:"finished"`
-	Phase               string         `json:"phase"`
-	CurrentDay          int            `json:"current_day"`
-	MaxDays             int            `json:"max_days"`
-	CurrentTurnTeamID   string         `json:"current_turn_team_id,omitempty"`
-	CurrentTurnTeamName string         `json:"current_turn_team_name,omitempty"`
-	CyclesCompleted     int            `json:"cycles_completed"`
-	LastRetroDay        int            `json:"last_retro_day,omitempty"`
-	NextDayIsRetro      bool           `json:"next_day_is_retro,omitempty"`
-	ProjectsDone        int            `json:"projects_done"`
+	Code                string          `json:"code"`
+	Started             bool            `json:"started"`
+	Finished            bool            `json:"finished"`
+	Phase               string          `json:"phase"`
+	CurrentDay          int             `json:"current_day"`
+	MaxDays             int             `json:"max_days"`
+	CurrentTurnTeamID   string          `json:"current_turn_team_id,omitempty"`
+	CurrentTurnTeamName string          `json:"current_turn_team_name,omitempty"`
+	CyclesCompleted     int             `json:"cycles_completed"`
+	LastRetroDay        int             `json:"last_retro_day,omitempty"`
+	NextDayIsRetro      bool            `json:"next_day_is_retro,omitempty"`
+	ProjectsDone        int             `json:"projects_done"`
+	ProjectWIPLimits    map[string]int  `json:"project_wip_limits,omitempty"`
 	TurnActionDone      map[string]bool `json:"turn_action_done,omitempty"`
-	FacilitatorID       string         `json:"facilitator_id"`
-	Teams               []teamState    `json:"teams"`
-	Projects            []projectState `json:"projects"`
-	History             []LogEntry     `json:"history"`
+	FacilitatorID       string          `json:"facilitator_id"`
+	Teams               []teamState     `json:"teams"`
+	Projects            []projectState  `json:"projects"`
+	History             []LogEntry      `json:"history"`
 }
 
 type joinRequest struct {
@@ -197,6 +201,13 @@ type dragTaskRequest struct {
 type setWIPRequest struct {
 	PlayerID string `json:"player_id"`
 	TeamID   string `json:"team_id"`
+	Stage    string `json:"stage"`
+	WIPLimit int    `json:"wip_limit"`
+}
+
+type setProjectWIPRequest struct {
+	PlayerID string `json:"player_id"`
+	Column   string `json:"column"`
 	WIPLimit int    `json:"wip_limit"`
 }
 
@@ -307,12 +318,12 @@ func parseJSONOrForm(r *http.Request, dst interface{}) error {
 }
 
 func nextGameCode() string {
-    const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789"
-    code := make([]byte, 6)
-    for i := range code {
-        code[i] = charset[rand.Intn(len(charset))]
-    }
-    return string(code)
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789"
+	code := make([]byte, 6)
+	for i := range code {
+		code[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(code)
 }
 
 func (s *Server) nextPlayerID() string {
@@ -348,9 +359,23 @@ func newTeam(id string, name string) *Team {
 		ID:       id,
 		Name:     name,
 		WIPLimit: 2,
-		Members:  make([]string, 0),
-		Board:    board,
+		WIPLimits: map[string]int{
+			"ready":       4,
+			"in_progress": 2,
+			"review":      2,
+			"done":        99,
+		},
+		Members: make([]string, 0),
+		Board:   board,
 	}
+}
+
+func cloneIntMap(in map[string]int) map[string]int {
+	out := make(map[string]int, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
 
 func (s *Server) appendLog(g *Game, category string, msg string) {
@@ -420,6 +445,7 @@ func stateFromGame(g *Game) stateResponse {
 			ID:              team.ID,
 			Name:            team.Name,
 			WIPLimit:        team.WIPLimit,
+			WIPLimits:       cloneIntMap(team.WIPLimits),
 			Members:         members,
 			Board:           board,
 			Counts:          counts,
@@ -466,6 +492,7 @@ func stateFromGame(g *Game) stateResponse {
 		LastRetroDay:        g.LastRetroDay,
 		NextDayIsRetro:      nextDayWouldBeRetro(g),
 		ProjectsDone:        g.ProjectsDone,
+		ProjectWIPLimits:    cloneIntMap(g.ProjectWIPLimits),
 		FacilitatorID:       g.FacilitatorID,
 		Teams:               teams,
 		Projects:            projects,
@@ -577,12 +604,6 @@ func (s *Server) playerHasTailsAction(g *Game, team *Team, playerID string) bool
 				continue
 			}
 			if ownFirst && t.OwnerID != playerID {
-				continue
-			}
-			if st == "ready" {
-				if len(team.Board["in_progress"]) < team.WIPLimit {
-					return true
-				}
 				continue
 			}
 			return true
@@ -754,9 +775,6 @@ func firstMovableTask(g *Game, team *Team) *Task {
 		for _, tid := range team.Board[st] {
 			if t, ok := g.Tasks[tid]; ok {
 				if t.Blocked {
-					continue
-				}
-				if st == "ready" && len(team.Board["in_progress"]) >= team.WIPLimit {
 					continue
 				}
 				return t
@@ -1046,14 +1064,19 @@ func (s *Server) handleCreateGame(w http.ResponseWriter, r *http.Request) {
 		CyclesCompleted: 0,
 		ProjectsDone:    0,
 		Projects:        projects,
-		ProjectOrder:    projectOrder,
-		Teams:           teams,
-		TeamOrder:       teamOrder,
-		Players:         map[string]*Player{facilitatorID: facilitator},
-		Tasks:           make(map[string]*Task),
-		FacilitatorID:   facilitatorID,
-		TurnActionDone:  make(map[string]bool),
-		History:         make([]LogEntry, 0),
+		ProjectWIPLimits: map[string]int{
+			"todo":        3,
+			"integration": 2,
+			"done":        99,
+		},
+		ProjectOrder:   projectOrder,
+		Teams:          teams,
+		TeamOrder:      teamOrder,
+		Players:        map[string]*Player{facilitatorID: facilitator},
+		Tasks:          make(map[string]*Task),
+		FacilitatorID:  facilitatorID,
+		TurnActionDone: make(map[string]bool),
+		History:        make([]LogEntry, 0),
 	}
 	s.appendLog(game, "setup", "Игра создана. Ведущий может запускать проекты и управлять раундами.")
 
@@ -1402,10 +1425,6 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 				s.broadcastGameState(code, state)
 				return
 			}
-			if to == "in_progress" && len(team.Board["in_progress"]) >= team.WIPLimit {
-				errorJSON(w, http.StatusConflict, "Достигнут лимит WIP")
-				return
-			}
 			if !s.moveTaskToStage(g, team, task, to) {
 				errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
 				return
@@ -1479,12 +1498,86 @@ func (s *Server) handleSetWIP(w http.ResponseWriter, r *http.Request, code strin
 	}
 	req.PlayerID = strings.TrimSpace(req.PlayerID)
 	req.TeamID = strings.TrimSpace(req.TeamID)
-	if req.PlayerID == "" || req.TeamID == "" {
-		errorJSON(w, http.StatusBadRequest, "Не указаны идентификатор игрока или команды")
+	req.Stage = strings.TrimSpace(req.Stage)
+	if req.PlayerID == "" || req.TeamID == "" || req.Stage == "" {
+		errorJSON(w, http.StatusBadRequest, "Не указаны идентификатор игрока, команды или колонки")
+		return
+	}
+	if req.Stage != "ready" && req.Stage != "in_progress" && req.Stage != "review" {
+		errorJSON(w, http.StatusBadRequest, "Некорректная колонка")
 		return
 	}
 	if req.WIPLimit < 1 || req.WIPLimit > 10 {
 		errorJSON(w, http.StatusBadRequest, "Лимит WIP должен быть от 1 до 10")
+		return
+	}
+
+	s.mu.Lock()
+	g, ok := s.findGame(code)
+	if !ok {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
+		return
+	}
+	player, ok := g.Players[req.PlayerID]
+	if !ok {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusForbidden, "Игрок не в этой игре")
+		return
+	}
+	if g.Phase != "retro" && g.Phase != "setup" {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusConflict, "Лимит WIP можно менять только на ретро или до начала игры")
+		return
+	}
+	team, ok := g.Teams[req.TeamID]
+	if !ok {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusNotFound, "Команда не найдена")
+		return
+	}
+	if player.Role != "facilitator" && player.TeamID != team.ID {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusForbidden, "Можно менять WIP только своей команды")
+		return
+	}
+	if team.WIPLimits == nil {
+		team.WIPLimits = map[string]int{"ready": 4, "in_progress": 2, "review": 2, "done": 99}
+	}
+	oldLimit := team.WIPLimits[req.Stage]
+	if oldLimit == req.WIPLimit {
+		state := stateFromGame(g)
+		s.mu.Unlock()
+		writeJSON(w, http.StatusOK, state)
+		return
+	}
+	team.WIPLimits[req.Stage] = req.WIPLimit
+	s.appendLog(g, "retro", "Изменен WIP лимит команды "+team.Name+" для "+req.Stage+": "+strconv.Itoa(oldLimit)+" -> "+strconv.Itoa(req.WIPLimit))
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
+}
+
+func (s *Server) handleSetProjectWIP(w http.ResponseWriter, r *http.Request, code string) {
+	var req setProjectWIPRequest
+	if err := parseJSONOrForm(r, &req); err != nil {
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
+		return
+	}
+	req.PlayerID = strings.TrimSpace(req.PlayerID)
+	req.Column = strings.TrimSpace(req.Column)
+	if req.PlayerID == "" || req.Column == "" {
+		errorJSON(w, http.StatusBadRequest, "Не указаны идентификатор игрока или колонка")
+		return
+	}
+	if req.Column != "todo" && req.Column != "integration" {
+		errorJSON(w, http.StatusBadRequest, "Некорректная колонка проектной доски")
+		return
+	}
+	if req.WIPLimit < 1 || req.WIPLimit > 30 {
+		errorJSON(w, http.StatusBadRequest, "Лимит WIP должен быть от 1 до 30")
 		return
 	}
 
@@ -1500,25 +1593,23 @@ func (s *Server) handleSetWIP(w http.ResponseWriter, r *http.Request, code strin
 		errorJSON(w, http.StatusForbidden, err.Error())
 		return
 	}
-	if g.Phase != "retro" {
+	if g.Phase != "retro" && g.Phase != "setup" {
 		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "Лимит WIP можно менять только на ретро")
+		errorJSON(w, http.StatusConflict, "Лимиты проектной доски можно менять только на ретро или до начала игры")
 		return
 	}
-	team, ok := g.Teams[req.TeamID]
-	if !ok {
+	if g.ProjectWIPLimits == nil {
+		g.ProjectWIPLimits = map[string]int{"todo": 3, "integration": 2, "done": 99}
+	}
+	old := g.ProjectWIPLimits[req.Column]
+	if old == req.WIPLimit {
+		state := stateFromGame(g)
 		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "Команда не найдена")
+		writeJSON(w, http.StatusOK, state)
 		return
 	}
-	if team.WIPLimit == req.WIPLimit {
-		s.mu.Unlock()
-		errorJSON(w, http.StatusNotFound, "WIP лимит остался таким же")
-		return
-	}
-	oldLimit := team.WIPLimit
-	team.WIPLimit = req.WIPLimit
-	s.appendLog(g, "retro", "Изменен WIP лимит команды "+team.Name+": "+strconv.Itoa(oldLimit)+" -> "+strconv.Itoa(req.WIPLimit))
+	g.ProjectWIPLimits[req.Column] = req.WIPLimit
+	s.appendLog(g, "retro", "Изменен WIP проектной доски для "+req.Column+": "+strconv.Itoa(old)+" -> "+strconv.Itoa(req.WIPLimit))
 	state := stateFromGame(g)
 	s.mu.Unlock()
 
@@ -1659,6 +1750,9 @@ func (s *Server) handleGameRoutes(w http.ResponseWriter, r *http.Request) {
 			return
 		case "continue":
 			s.handleContinueAfterRetro(w, r, code)
+			return
+		case "set_project_wip":
+			s.handleSetProjectWIP(w, r, code)
 			return
 		case "drag":
 			s.handleDragTask(w, r, code)

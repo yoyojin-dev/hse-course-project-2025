@@ -20,6 +20,7 @@ export type Team = {
   id: string;
   name: string;
   wip_limit?: number;
+  wip_limits?: Record<string, number>;
   members?: Member[];
   counts?: Record<string, number>;
   board?: Record<string, Task[]>;
@@ -58,6 +59,7 @@ export type GameState = {
   cycles_completed: number;
   last_retro_day?: number;
   next_day_is_retro?: boolean;
+  project_wip_limits?: Record<string, number>;
   phase: string;
   turn_action_done?: Record<string, boolean>;
   started?: boolean;

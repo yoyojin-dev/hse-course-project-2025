@@ -219,6 +219,11 @@ a {
 .project-kanban-col h3 {
   margin: 0 0 10px;
   font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
 }
 
 .col-empty {
@@ -307,7 +312,7 @@ a {
 .team-members-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 14px;
+  gap: 8px 0;
 }
 
 .team-member-item {
@@ -315,6 +320,16 @@ a {
   align-items: center;
   gap: 6px;
   min-height: 30px;
+  padding: 0 12px;
+  border-right: 1px solid var(--muted);
+}
+
+.team-member-item:first-child {
+  padding-left: 0;
+}
+
+.team-member-item:last-child {
+  border-right: none;
 }
 
 .team-member-name {
@@ -386,6 +401,67 @@ a {
   margin: 0 0 8px;
   font-size: 13px;
   color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  position: relative;
+}
+
+.wip-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--muted);
+  background: #161b2a;
+}
+
+.wip-pill.over {
+  border-color: #b24343;
+  color: #ff9b9b;
+  background: rgba(120, 37, 37, 0.32);
+}
+
+.wip-pill.wip-editable {
+  cursor: pointer;
+  border-style: dashed;
+}
+
+.wip-pill.wip-editable:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wip-pill.wip-editing {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-style: solid;
+  border-color: var(--accent);
+  background: #1a2035;
+  z-index: 10;
+}
+
+.wip-inline-input {
+  width: 28px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  color: inherit;
+  font-size: inherit;
+  text-align: center;
+  padding: 0;
+  outline: none;
+  /* hide browser spin buttons */
+  -moz-appearance: textfield;
+}
+.wip-inline-input::-webkit-inner-spin-button,
+.wip-inline-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
 }
 
 .col.drop-target {
