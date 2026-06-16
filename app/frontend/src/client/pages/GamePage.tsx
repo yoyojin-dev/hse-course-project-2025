@@ -797,6 +797,14 @@ const GamePage: React.FC = () => {
                     <span className="metric-title">Ретро проведены</span>
                     <span className="metric-value">{state.metrics.retro_days}</span>
                   </div>
+                  <div className="metric-card">
+                    <span className="metric-title">Дни блокировки (Суммарно)</span>
+                    <span className="metric-value">{state.metrics.total_blocked_days}</span>
+                  </div>
+                  <div className="metric-card" title="Количество штрафов за задержку интеграции и другие нарушения">
+                    <span className="metric-title">Штрафы (Суммарно)</span>
+                    <span className="metric-value">{state.metrics.total_penalties}</span>
+                  </div>
                 </div>
                 <div className="metrics-cfd">
                   <h3>CFD (Текущий статус)</h3>

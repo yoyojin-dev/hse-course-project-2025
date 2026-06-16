@@ -98,6 +98,7 @@ type Game struct {
 	FacilitatorID     string                        `json:"facilitator_id"`
 	TurnActionDone    map[string]bool               `json:"-"`
 	PlayerDayProgress map[string]*playerDayProgress `json:"-"`
+	TotalBlockedDays  int                           `json:"-"`
 	History           []LogEntry                    `json:"history"`
 }
 
@@ -149,12 +150,14 @@ type projectState struct {
 }
 
 type GameMetrics struct {
-	CFD       map[string]int `json:"cfd"`
-	WIP       int            `json:"wip"`
-	LeadTime  float64        `json:"lead_time"`
-	Blocked   int            `json:"blocked"`
-	RetroDays int            `json:"retro_days"`
-	Velocity  float64        `json:"velocity"`
+	CFD              map[string]int `json:"cfd"`
+	WIP              int            `json:"wip"`
+	LeadTime         float64        `json:"lead_time"`
+	Blocked          int            `json:"blocked"`
+	RetroDays        int            `json:"retro_days"`
+	Velocity         float64        `json:"velocity"`
+	TotalBlockedDays int            `json:"total_blocked_days"`
+	TotalPenalties   int            `json:"total_penalties"`
 }
 
 type stateResponse struct {
@@ -447,13 +450,24 @@ func calculateMetrics(g *Game) *GameMetrics {
 		m.LeadTime = float64(totalLeadTime) / float64(completedProjects)
 	}
 
+	var penalties int
 	blocked := 0
 	for _, task := range g.Tasks {
 		if task.Blocked && task.Stage != "done" {
 			blocked++
 		}
+		if task.Penalty {
+			penalties++
+		}
+	}
+	for _, p := range g.Projects {
+		if p.PenaltyIssued {
+			penalties++
+		}
 	}
 	m.Blocked = blocked
+	m.TotalBlockedDays = g.TotalBlockedDays
+	m.TotalPenalties = penalties
 
 	m.RetroDays = g.CyclesCompleted
 	if g.CurrentDay > 0 {
@@ -765,6 +779,7 @@ func (s *Server) beginRetroPhase(g *Game) {
 func (s *Server) closeDayAndEnterRetro(g *Game) {
 	g.CurrentDay++
 	s.tickProjectIntegrationDays(g)
+	s.tickBlockedDays(g)
 	s.resetDayProgress(g)
 	s.beginRetroPhase(g)
 	s.logMetrics(g)
@@ -773,6 +788,7 @@ func (s *Server) closeDayAndEnterRetro(g *Game) {
 func (s *Server) closeDayAndAdvance(g *Game) {
 	g.CurrentDay++
 	s.tickProjectIntegrationDays(g)
+	s.tickBlockedDays(g)
 	s.resetDayProgress(g)
 
 	if retroDueOnDay(g, g.CurrentDay) {
@@ -836,6 +852,14 @@ func (s *Server) tickProjectIntegrationDays(g *Game) {
 		p.DaysInIntegration++
 		if p.DaysInIntegration > 5 && !p.PenaltyIssued {
 			s.applyProjectIntegrationPenalty(g, p)
+		}
+	}
+}
+
+func (s *Server) tickBlockedDays(g *Game) {
+	for _, task := range g.Tasks {
+		if task.Blocked && task.Stage != "done" {
+			g.TotalBlockedDays++
 		}
 	}
 }

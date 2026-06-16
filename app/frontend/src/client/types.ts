@@ -58,6 +58,8 @@ export type GameMetrics = {
   blocked: number;
   retro_days: number;
   velocity: number;
+  total_blocked_days: number;
+  total_penalties: number;
 };
 
 export type GameState = {
