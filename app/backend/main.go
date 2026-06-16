@@ -1394,8 +1394,14 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 	to := req.ToStage
 	if player.CurrentCoin == "tails" {
 		needOwnOnly := hasOwnHeadsAction(g, team, player.ID)
-		if needOwnOnly && task.Stage != "ready" && task.OwnerID != player.ID {
-			errorJSON(w, http.StatusConflict, "Сначала поработайте со своими задачами")
+		canTakeNewTails := hasReadyStartTask(g, team)
+		isHelpingOther := task.Stage != "ready" && task.OwnerID != player.ID
+		if isHelpingOther && (needOwnOnly || canTakeNewTails) {
+			if needOwnOnly {
+				errorJSON(w, http.StatusConflict, "Сначала поработайте со своими задачами")
+			} else {
+				errorJSON(w, http.StatusConflict, "Помочь другому можно только если нет доступных задач для взятия")
+			}
 			return
 		}
 
@@ -1405,7 +1411,7 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 				return
 			}
 			task.Blocked = false
-			task.OwnerID = player.ID
+			// Owner stays — unblocking helps the original assignee continue their work.
 			s.appendLog(g, "drag", "Игрок "+player.Nickname+" разблокировал "+task.ID+".")
 		} else {
 			allowed := false
@@ -1429,7 +1435,8 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 				errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
 				return
 			}
-			if to != "done" {
+			// Only assign ownership when taking a new task from ready.
+			if from == "ready" {
 				task.OwnerID = player.ID
 			}
 			s.appendLog(g, "drag", "Игрок "+player.Nickname+" перетащил "+task.ID+" из "+from+" в "+to+" (решка).")
@@ -1437,7 +1444,44 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 		s.advanceTurn(g, player.ID)
 	} else {
 		prog := s.ensurePlayerProgress(g, player.ID)
-		if !prog.HeadsBlockDone {
+		// Help action: if the player can't take a new task (ready is empty),
+		// they may advance or unblock someone else's task instead.
+		// Owner is not changed in this case.
+		canTakeNew := hasReadyStartTask(g, team)
+		isHelp := !canTakeNew &&
+			task.OwnerID != player.ID &&
+			!prog.HeadsBlockDone && !prog.HeadsStartDone
+
+		if isHelp {
+			if task.Blocked {
+				if from != to {
+					errorJSON(w, http.StatusConflict, "Заблокированную задачу можно только разблокировать")
+					return
+				}
+				task.Blocked = false
+				s.appendLog(g, "drag", "Игрок "+player.Nickname+" помог: разблокировал "+task.ID+" (орёл).")
+			} else {
+				allowed := false
+				switch from {
+				case "in_progress":
+					allowed = to == "review"
+				case "review":
+					allowed = to == "done"
+				}
+				if !allowed {
+					errorJSON(w, http.StatusConflict, "Орёл (помощь): можно продвинуть чужую задачу вперёд или разблокировать её")
+					return
+				}
+				if !s.moveTaskToStage(g, team, task, to) {
+					errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
+					return
+				}
+				s.appendLog(g, "drag", "Игрок "+player.Nickname+" помог: продвинул "+task.ID+" из "+from+" в "+to+" (орёл).")
+			}
+			prog.HeadsBlockDone = true
+			prog.HeadsStartDone = true
+			s.advanceTurn(g, player.ID)
+		} else if !prog.HeadsBlockDone {
 			if from != to || from == "ready" {
 				errorJSON(w, http.StatusConflict, "Орёл: сначала заблокируйте задачу в работе или на ревью")
 				return
@@ -1766,10 +1810,116 @@ func (s *Server) handleGameRoutes(w http.ResponseWriter, r *http.Request) {
 		case "skip_turn":
 			s.handleSkipTurn(w, r, code)
 			return
+		case "switch_team":
+			s.handleSwitchTeam(w, r, code)
+			return
 		}
 	}
 
 	errorJSON(w, http.StatusNotFound, "Не найдено")
+}
+
+type switchTeamRequest struct {
+	PlayerID   string `json:"player_id"`
+	TargetID   string `json:"target_player_id"` // player to move (facilitator can move others)
+	NewTeamID  string `json:"new_team_id"`
+}
+
+func (s *Server) handleSwitchTeam(w http.ResponseWriter, r *http.Request, code string) {
+	var req switchTeamRequest
+	if err := parseJSONOrForm(r, &req); err != nil {
+		errorJSON(w, http.StatusBadRequest, "Некорректный запрос")
+		return
+	}
+	req.PlayerID = strings.TrimSpace(req.PlayerID)
+	req.TargetID = strings.TrimSpace(req.TargetID)
+	req.NewTeamID = strings.TrimSpace(req.NewTeamID)
+	if req.PlayerID == "" || req.TargetID == "" || req.NewTeamID == "" {
+		errorJSON(w, http.StatusBadRequest, "Не указаны обязательные поля")
+		return
+	}
+
+	s.mu.Lock()
+	g, ok := s.findGame(code)
+	if !ok {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusNotFound, "Игра не найдена")
+		return
+	}
+	if g.Phase != "retro" && g.Phase != "setup" {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusConflict, "Сменить команду можно только до начала игры или во время ретро")
+		return
+	}
+	actor, ok := g.Players[req.PlayerID]
+	if !ok {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusForbidden, "Игрок не в этой игре")
+		return
+	}
+	// Only facilitator can move others; regular players can only move themselves.
+	if actor.Role != "facilitator" && req.PlayerID != req.TargetID {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusForbidden, "Можно переключить только свою команду")
+		return
+	}
+	target, ok := g.Players[req.TargetID]
+	if !ok {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusNotFound, "Целевой игрок не найден")
+		return
+	}
+	if target.Role == "facilitator" {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusBadRequest, "Фасилитатор не может сменить команду")
+		return
+	}
+	newTeam, ok := g.Teams[req.NewTeamID]
+	if !ok {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusNotFound, "Команда не найдена")
+		return
+	}
+	if target.TeamID == req.NewTeamID {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusBadRequest, "Игрок уже в этой команде")
+		return
+	}
+	if len(newTeam.Members) >= 5 {
+		s.mu.Unlock()
+		errorJSON(w, http.StatusConflict, "В команде уже максимальное количество участников")
+		return
+	}
+
+	oldTeam := g.Teams[target.TeamID]
+	// Remove from old team
+	newMembers := make([]string, 0, len(oldTeam.Members))
+	for _, pid := range oldTeam.Members {
+		if pid != req.TargetID {
+			newMembers = append(newMembers, pid)
+		}
+	}
+	oldTeam.Members = newMembers
+	// Add to new team
+	newTeam.Members = append(newTeam.Members, req.TargetID)
+	target.TeamID = req.NewTeamID
+
+	// Move all tasks owned by the player to the new team (both metadata and board slots).
+	for _, task := range g.Tasks {
+		if task.TeamID != oldTeam.ID || task.OwnerID != req.TargetID {
+			continue
+		}
+		task.TeamID = req.NewTeamID
+		oldTeam.Board[task.Stage] = removeTaskFromSlice(oldTeam.Board[task.Stage], task.ID)
+		newTeam.Board[task.Stage] = append(newTeam.Board[task.Stage], task.ID)
+	}
+
+	s.appendLog(g, "retro", target.Nickname+" перешёл из команды "+oldTeam.Name+" в команду "+newTeam.Name)
+	state := stateFromGame(g)
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, state)
+	s.broadcastGameState(code, state)
 }
 
 func main() {

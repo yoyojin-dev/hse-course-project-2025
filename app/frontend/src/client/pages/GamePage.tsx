@@ -88,13 +88,18 @@ const CoinIcon: React.FC<CoinIconProps> = ({ coin }) => {
 
 type TeamMembersProps = {
   members: Member[];
+  currentTeamId?: string;
+  allTeams?: { id: string; name: string }[];
+  canSwitch?: boolean;
+  onSwitch?: (memberId: string, newTeamId: string) => void;
 };
 
-const TeamMembers: React.FC<TeamMembersProps> = ({ members }) => {
+const TeamMembers: React.FC<TeamMembersProps> = ({ members, currentTeamId, allTeams, canSwitch, onSwitch }) => {
   const players = members.filter((m) => m.role !== 'facilitator');
   if (!players.length) {
     return <span className="help">Участники: —</span>;
   }
+  const otherTeams = (allTeams || []).filter((t) => t.id !== currentTeamId);
   return (
     <div className="team-members">
       <span className="team-members-label">Участники:</span>
@@ -103,6 +108,19 @@ const TeamMembers: React.FC<TeamMembersProps> = ({ members }) => {
           <span key={member.id} className="team-member-item">
             <span className="team-member-name">{member.nickname}</span>
             <CoinIcon coin={member.current_coin} />
+            {canSwitch && otherTeams.length > 0 && (
+              <select
+                className="switch-team-select"
+                value=""
+                title="Переместить в другую команду"
+                onChange={(e) => { if (e.target.value) onSwitch?.(member.id, e.target.value); }}
+              >
+                <option value="" disabled>→</option>
+                {otherTeams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
           </span>
         ))}
       </div>
@@ -462,6 +480,23 @@ const GamePage: React.FC = () => {
     }
   };
 
+  const switchTeam = async (targetPlayerId: string, newTeamId: string) => {
+    try {
+      setBusy(true);
+      const data = await postJson<GameState>(`/api/game/${encodeURIComponent(gamecode)}/switch_team`, {
+        player_id: playerId,
+        target_player_id: targetPlayerId,
+        new_team_id: newTeamId,
+      });
+      setState(data);
+      setStatusMessage('Игрок переведён в другую команду.', 'ok');
+    } catch (err) {
+      setStatusMessage(err instanceof Error ? err.message : 'Ошибка запроса', 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const setTeamWip = async (teamId: string, stage: string, limit: number) => {
     try {
       setBusy(true);
@@ -581,7 +616,13 @@ const GamePage: React.FC = () => {
                   </span>
                   <span className="help">Участников: {(team.members || []).length}</span>
                 </div>
-                <TeamMembers members={team.members || []} />
+                <TeamMembers
+                  members={team.members || []}
+                  currentTeamId={team.id}
+                  allTeams={state?.teams || []}
+                  canSwitch={(state?.phase === 'retro' || state?.phase === 'setup') && isFacilitator}
+                  onSwitch={switchTeam}
+                />
                 <div className="columns" style={{ marginTop: 10 }}>
                   {STAGES.map((stage) => (
                     <div

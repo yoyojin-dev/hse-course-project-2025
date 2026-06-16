@@ -332,6 +332,21 @@ a {
   border-right: none;
 }
 
+.switch-team-select {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 1px 2px;
+  cursor: pointer;
+}
+
+.switch-team-select:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .team-member-name {
   color: var(--ink);
 }
