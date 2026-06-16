@@ -47,7 +47,7 @@ const StartPage: React.FC = () => {
       const res = await fetch('/api/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team_names: teams, max_days: 15 })
+        body: JSON.stringify({ team_names: teams })
       });
       if (res.ok) {
         const body = await res.json();

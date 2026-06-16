@@ -12,6 +12,17 @@ type DragState = {
 };
 
 const STAGES = ['ready', 'in_progress', 'review', 'done'];
+const TEAM_STAGE_LABELS: Record<string, string> = {
+  ready: 'ready',
+  in_progress: 'in_progress',
+  review: 'review',
+  done: 'done'
+};
+const PROJECT_STAGE_LABELS: Record<string, string> = {
+  todo: 'В процессе',
+  integration: 'Интеграция',
+  done: 'Готово'
+};
 
 const STAGES_OPEN: Array<'ready' | 'in_progress' | 'review'> = ['ready', 'in_progress', 'review'];
 
@@ -41,12 +52,153 @@ function ownerLabel(team: Team, ownerId?: string): string {
   return member?.nickname || ownerId;
 }
 
+type CoinIconProps = {
+  coin?: string;
+};
+
+const CoinIcon: React.FC<CoinIconProps> = ({ coin }) => {
+  if (coin === 'heads') {
+    return (
+      <img
+        src="/coins/heads.png"
+        srcSet="/coins/heads@2x.png 2x"
+        width={30}
+        height={30}
+        alt="Орёл"
+        className="coin-icon coin-icon-heads"
+        title="Орёл"
+      />
+    );
+  }
+  if (coin === 'tails') {
+    return (
+      <img
+        src="/coins/tails.png"
+        srcSet="/coins/tails@2x.png 2x"
+        width={28}
+        height={28}
+        alt="Решка"
+        className="coin-icon"
+        title="Решка"
+      />
+    );
+  }
+  return null;
+};
+
+type TeamMembersProps = {
+  members: Member[];
+  currentTeamId?: string;
+  allTeams?: { id: string; name: string }[];
+  canSwitch?: boolean;
+  onSwitch?: (memberId: string, newTeamId: string) => void;
+};
+
+const TeamMembers: React.FC<TeamMembersProps> = ({ members, currentTeamId, allTeams, canSwitch, onSwitch }) => {
+  const players = members.filter((m) => m.role !== 'facilitator');
+  if (!players.length) {
+    return <span className="help">Участники: —</span>;
+  }
+  const otherTeams = (allTeams || []).filter((t) => t.id !== currentTeamId);
+  return (
+    <div className="team-members">
+      <span className="team-members-label">Участники:</span>
+      <div className="team-members-list">
+        {players.map((member) => (
+          <span key={member.id} className="team-member-item">
+            <span className="team-member-name">{member.nickname}</span>
+            <CoinIcon coin={member.current_coin} />
+            {canSwitch && otherTeams.length > 0 && (
+              <select
+                className="switch-team-select"
+                value=""
+                title="Переместить в другую команду"
+                onChange={(e) => { if (e.target.value) onSwitch?.(member.id, e.target.value); }}
+              >
+                <option value="" disabled>→</option>
+                {otherTeams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Inline-editable WIP pill. When isEditable=true, clicking the limit opens an input.
+// Auto-saves on blur or Enter; cancels on Escape.
+const WipPill: React.FC<{
+  count: number;
+  limit: number | undefined;
+  isEditable?: boolean;
+  onSave?: (val: number) => void;
+}> = ({ count, limit, isEditable, onSave }) => {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(limit ?? 1));
+
+  const open = () => { setVal(String(limit ?? 1)); setEditing(true); };
+  const commit = (raw: string) => {
+    const n = parseInt(raw, 10);
+    if (!isNaN(n) && n >= 1) onSave?.(n);
+    setEditing(false);
+  };
+
+  const isOver = count > (limit ?? 1);
+
+  if (editing) {
+    return (
+      <span className="wip-pill wip-editing" onClick={(e) => e.stopPropagation()}>
+        ({count}/
+        <input
+          className="wip-inline-input"
+          type="number"
+          min={1}
+          max={30}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={(e) => commit(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(val); }
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          autoFocus
+        />)
+      </span>
+    );
+  }
+
+  if (isEditable) {
+    return (
+      <span
+        className={`wip-pill wip-editable ${isOver ? 'over' : ''}`}
+        onClick={open}
+        title="Нажмите, чтобы изменить WIP-лимит"
+      >
+        ({count}/{limit ?? '—'})
+      </span>
+    );
+  }
+
+  return (
+    <span className={`wip-pill ${isOver ? 'over' : ''}`}>
+      ({count}/{limit ?? '—'})
+    </span>
+  );
+};
+
 type ProjectKanbanProps = {
   teams: Team[];
   projects: Project[];
+  wipLimits: Record<string, number>;
+  isRetro?: boolean;
+  canEditWip?: boolean;
+  onSetProjectWip?: (col: string, limit: number) => void;
 };
 
-const ProjectKanban: React.FC<ProjectKanbanProps> = ({ teams, projects }) => {
+const ProjectKanban: React.FC<ProjectKanbanProps> = ({ teams, projects, wipLimits, isRetro, canEditWip, onSetProjectWip }) => {
   const colTodo = projects.filter(
     (p) => p.started && !p.completed && (!p.board_stage || p.board_stage === 'todo')
   );
@@ -54,6 +206,11 @@ const ProjectKanban: React.FC<ProjectKanbanProps> = ({ teams, projects }) => {
     (p) => p.started && !p.completed && p.board_stage === 'integration'
   );
   const colDone = projects.filter((p) => p.completed);
+  const projectCounts = {
+    todo: colTodo.length,
+    integration: colIntegration.length,
+    done: colDone.length
+  };
 
   const renderCard = (p: Project, column: 'todo' | 'integration' | 'done') => {
     const days = p.days_in_integration ?? 0;
@@ -113,17 +270,35 @@ const ProjectKanban: React.FC<ProjectKanbanProps> = ({ teams, projects }) => {
     <div className="project-kanban">
       <div className="project-kanban-cols">
         <div className="project-kanban-col">
-          <h3>Сделать</h3>
+          <h3>
+            {PROJECT_STAGE_LABELS.todo}
+            <WipPill
+              count={projectCounts.todo}
+              limit={wipLimits.todo}
+              isEditable={isRetro && canEditWip}
+              onSave={(v) => onSetProjectWip?.('todo', v)}
+            />
+          </h3>
           {colTodo.length === 0 && <div className="col-empty">Пусто</div>}
           {colTodo.map((p) => renderCard(p, 'todo'))}
         </div>
         <div className="project-kanban-col">
-          <h3>Интеграция</h3>
+          <h3>
+            {PROJECT_STAGE_LABELS.integration}
+            <WipPill
+              count={projectCounts.integration}
+              limit={wipLimits.integration}
+              isEditable={isRetro && canEditWip}
+              onSave={(v) => onSetProjectWip?.('integration', v)}
+            />
+          </h3>
           {colIntegration.length === 0 && <div className="col-empty">Пусто</div>}
           {colIntegration.map((p) => renderCard(p, 'integration'))}
         </div>
         <div className="project-kanban-col">
-          <h3>Готово</h3>
+          <h3>
+            {PROJECT_STAGE_LABELS.done}
+          </h3>
           {colDone.length === 0 && <div className="col-empty">Пока нет</div>}
           {colDone.map((p) => renderCard(p, 'done'))}
         </div>
@@ -175,14 +350,13 @@ const GamePage: React.FC = () => {
     try {
       const data = await getJson<GameState>(`/api/game/${encodeURIComponent(gamecode)}`);
       setState(data);
-      if (!silent) setStatusMessage('Состояние обновлено.', 'ok');
     } catch (err) {
       if (!silent) setStatusMessage('Сервер недоступен.', 'err');
     }
   }, [gamecode]);
 
   useEffect(() => {
-    loadState(false);
+    loadState(true);
     if (wsConnected) {
       return () => undefined;
     }
@@ -248,7 +422,11 @@ const GamePage: React.FC = () => {
       });
       setState(data);
       setFlashTaskId(drag.taskId);
-      setStatusMessage('Карточка перемещена.', 'ok');
+      if (isFacilitator) {
+        setStatusMessage('Карточка перемещена.', 'ok');
+      } else {
+        setStatusMessage('', '');
+      }
       window.setTimeout(() => setFlashTaskId(''), 550);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ошибка перемещения.';
@@ -270,7 +448,11 @@ const GamePage: React.FC = () => {
       });
       setState(data);
       setFlashTaskId(task.id);
-      setStatusMessage('Статус блокировки обновлен.', 'ok');
+      if (isFacilitator) {
+        setStatusMessage('Статус блокировки обновлен.', 'ok');
+      } else {
+        setStatusMessage('', '');
+      }
       window.setTimeout(() => setFlashTaskId(''), 550);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ошибка обновления.';
@@ -298,6 +480,58 @@ const GamePage: React.FC = () => {
     }
   };
 
+  const switchTeam = async (targetPlayerId: string, newTeamId: string) => {
+    try {
+      setBusy(true);
+      const data = await postJson<GameState>(`/api/game/${encodeURIComponent(gamecode)}/switch_team`, {
+        player_id: playerId,
+        target_player_id: targetPlayerId,
+        new_team_id: newTeamId,
+      });
+      setState(data);
+      setStatusMessage('Игрок переведён в другую команду.', 'ok');
+    } catch (err) {
+      setStatusMessage(err instanceof Error ? err.message : 'Ошибка запроса', 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setTeamWip = async (teamId: string, stage: string, limit: number) => {
+    try {
+      setBusy(true);
+      const data = await postJson<GameState>(`/api/game/${encodeURIComponent(gamecode)}/set_wip`, {
+        player_id: playerId,
+        team_id: teamId,
+        stage,
+        wip_limit: limit,
+      });
+      setState(data);
+      setStatusMessage('WIP-лимит обновлён.', 'ok');
+    } catch (err) {
+      setStatusMessage(err instanceof Error ? err.message : 'Ошибка запроса', 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setProjectWipInline = async (col: string, limit: number) => {
+    try {
+      setBusy(true);
+      const data = await postJson<GameState>(`/api/game/${encodeURIComponent(gamecode)}/set_project_wip`, {
+        player_id: playerId,
+        column: col,
+        wip_limit: limit,
+      });
+      setState(data);
+      setStatusMessage('WIP проектной доски обновлён.', 'ok');
+    } catch (err) {
+      setStatusMessage(err instanceof Error ? err.message : 'Ошибка запроса', 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const visibleTeams = useMemo(() => {
     if (!state?.teams) return [];
     if (isFacilitator) return state.teams;
@@ -307,6 +541,7 @@ const GamePage: React.FC = () => {
     () => state?.teams?.find((t) => t.id === playerRecord?.team_id) || null,
     [state?.teams, playerRecord]
   );
+  const myTeamStageLimits = myTeam?.wip_limits || {};
 
   const metaLine = useMemo(() => {
     if (!state) return '';
@@ -362,7 +597,7 @@ const GamePage: React.FC = () => {
           <div className="card">
             <h2 style={{ marginTop: 0 }}>{isFacilitator ? "Командные доски" : "Доска задач"}</h2>
             {!isFacilitator && myActionsHint && (
-              <div className="help" style={{ marginTop: 8 }}>
+              <div className="player-actions-hint">
                 <strong>Доступные действия:</strong> {myActionsHint}
               </div>
             )}
@@ -379,11 +614,15 @@ const GamePage: React.FC = () => {
                     />
                     <strong>{team.name}</strong>
                   </span>
-                  <span className="help">WIP={team.wip_limit}, участников: {(team.members || []).length}</span>
+                  <span className="help">Участников: {(team.members || []).length}</span>
                 </div>
-                <div className="help" style={{ marginTop: 6 }}>
-                  Участники: {(team.members || []).map((m) => m.nickname).join(', ')}
-                </div>
+                <TeamMembers
+                  members={team.members || []}
+                  currentTeamId={team.id}
+                  allTeams={state?.teams || []}
+                  canSwitch={(state?.phase === 'retro' || state?.phase === 'setup') && isFacilitator}
+                  onSwitch={switchTeam}
+                />
                 <div className="columns" style={{ marginTop: 10 }}>
                   {STAGES.map((stage) => (
                     <div
@@ -408,7 +647,18 @@ const GamePage: React.FC = () => {
                       }}
                     >
                       <h4>
-                        {stage} ({team.counts?.[stage] || 0})
+                        {TEAM_STAGE_LABELS[stage] || stage}
+                        {stage !== 'done' && (
+                          <WipPill
+                            count={team.counts?.[stage] || 0}
+                            limit={team.wip_limits?.[stage]}
+                            isEditable={
+                              (state?.phase === 'retro' || state?.phase === 'setup') &&
+                              (isFacilitator || team.id === playerRecord?.team_id)
+                            }
+                            onSave={(v) => setTeamWip(team.id, stage, v)}
+                          />
+                        )}
                       </h4>
                       {(team.board?.[stage] || []).map((task) => {
                         const isDone = stage === 'done';
@@ -503,10 +753,24 @@ const GamePage: React.FC = () => {
                 />
               </div>
             )}
+            {!isFacilitator && state?.phase === 'retro' && (
+              <div className="card">
+                <p className="help" style={{ margin: 0 }}>
+                  Ретро: вы можете провести рефлексию с коллегами и, если хотите, поменять WIP-лимиты, нажав на него в заголовке колонки.
+                </p>
+              </div>
+            )}
 
             <div className="card">
               <h2 style={{ marginTop: 0 }}>Проектная доска</h2>
-              <ProjectKanban teams={state?.teams || []} projects={state?.projects || []} />
+              <ProjectKanban
+                teams={state?.teams || []}
+                projects={state?.projects || []}
+                wipLimits={state?.project_wip_limits || { todo: 3, integration: 2, done: 99 }}
+                isRetro={state?.phase === 'retro' || state?.phase === 'setup'}
+                canEditWip={isFacilitator}
+                onSetProjectWip={setProjectWipInline}
+              />
             </div>
           </div>
         </div>
@@ -535,8 +799,17 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
   setBusy
 }) => {
   const [projectId, setProjectId] = useState(state.projects?.[0]?.id || '');
-  const [teamId, setTeamId] = useState(state.teams?.[0]?.id || '');
-  const [wip, setWip] = useState('2');
+  const currentPlayer = useMemo(() => {
+    for (const team of state.teams || []) {
+      const found = (team.members || []).find((member) => member.id === playerId);
+      if (found) return found;
+    }
+    if (state.facilitator_id === playerId) {
+      return { id: playerId, role: 'facilitator' };
+    }
+    return null;
+  }, [state, playerId]);
+  const isFacilitatorPanel = currentPlayer?.role === 'facilitator';
   const allPlayersDone = useMemo(() => {
     const players = (state.teams || []).flatMap((team) =>
       (team.members || []).filter((m) => m.role !== 'facilitator')
@@ -559,10 +832,14 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
     [state.teams]
   );
 
-  const nextDayStartsRetro = useMemo(
-    () => state.phase === 'running' && state.current_day > 0 && state.current_day % 5 === 0,
-    [state.phase, state.current_day]
-  );
+  const nextDayIsRetro = !!state.next_day_is_retro;
+  const joinLink = useMemo(() => {
+    const path = `/joining/${encodeURIComponent(gamecode)}`;
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}${path}`;
+    }
+    return path;
+  }, [gamecode]);
 
   const launchableProjects = useMemo(
     () => (state.projects || []).filter((p) => !p.started && !p.completed),
@@ -580,10 +857,6 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
     }
   }, [launchableProjects, projectId]);
 
-  useEffect(() => {
-    if (!teamId && state.teams?.[0]?.id) setTeamId(state.teams[0].id);
-  }, [state.teams, teamId]);
-
   const runAction = async (url: string, payload: Record<string, unknown>, okText: string) => {
     try {
       setBusy(true);
@@ -600,19 +873,31 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
 
   return (
     <div className="stack">
-      {!state.started && (
-        <div className="actions">
-          <button
-            className="btn"
-            type="button"
-            disabled={busy}
-            onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/start`, { player_id: playerId }, 'Игра запущена.')}
-          >
-            Старт игры
-          </button>
-        </div>
+      {isFacilitatorPanel && !state.started && (
+        <>
+          <p className="help" style={{ margin: '0 0 4px' }}>
+            При желании вы можете изменить начальные WIP-лимиты, нажав на них в заголовке любой колонки.
+          </p>
+          <div className="facilitator-join-link">
+            <span className="help">Ссылка для участников:</span>
+            <a className="facilitator-join-url" href={joinLink}>
+              {joinLink}
+            </a>
+          </div>
+          <div className="actions">
+            <button
+              className="btn"
+              type="button"
+              disabled={busy}
+              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/start`, { player_id: playerId }, 'Игра запущена.')}
+            >
+              Старт игры
+            </button>
+          </div>
+        </>
       )}
 
+      {isFacilitatorPanel && (
       <div className="actions project-launch-actions">
         {launchableProjects.length === 0 ? (
           <p className="help" style={{ margin: 0 }}>
@@ -652,57 +937,48 @@ const FacilitatorPanel: React.FC<FacilitatorProps> = ({
           <span className="help">Нет команды с пустой «Сделать» — новый проект сейчас добавить нельзя.</span>
         )}
       </div>
+      )}
 
-      {state.started && state.phase === 'running' && (
+      {isFacilitatorPanel && state.started && state.phase === 'running' && (
         <div className="actions">
-          <div className="facilitator-next-day">
+          <div className="facilitator-day-controls">
+            {!nextDayIsRetro && (
+              <>
+                <button
+                  className="btn facilitator-day-btn"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/next_day`, { player_id: playerId }, 'Новый день начался. Монетки брошены.')}
+                >
+                  Начать новый день
+                </button>
+                <span className="help facilitator-next-day-hint">
+                  {allPlayersDone ? 'Все игроки завершили действия.' : `Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
+                </span>
+              </>
+            )}
             <button
-              className="btn"
+              className="btn retro facilitator-day-btn"
               type="button"
               disabled={busy}
-              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/next_day`, { player_id: playerId }, nextDayStartsRetro ? 'Ретро началось.' : 'Новый день начался. Монетки брошены.')}
+              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/start_retro`, { player_id: playerId }, 'Ретро началось.')}
             >
-              {nextDayStartsRetro ? 'Начать ретро' : 'Начать новый день'}
+              Начать ретро
             </button>
-            <span className="help facilitator-next-day-hint">
-              {allPlayersDone ? 'Все игроки завершили действия.' : `Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
-            </span>
+            {nextDayIsRetro && (
+              <span className="help facilitator-next-day-hint">
+                {allPlayersDone ? 'По расписанию наступило ретро.' : `По расписанию ретро. Ожидаем команды: ${pendingTeams.join(', ') || '—'}`}
+              </span>
+            )}
           </div>
         </div>
       )}
 
       {state.started && state.phase === 'retro' && (
         <div className="retro-facilitator-block">
-          <div className="actions">
-            <select className="field" value={teamId} onChange={(event) => setTeamId(event.target.value)}>
-              {(state.teams || []).map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-            <input
-              className="field"
-              style={{ maxWidth: 120 }}
-              type="number"
-              min={1}
-              max={10}
-              value={wip}
-              onChange={(event) => setWip(event.target.value)}
-            />
-            <button
-              className="btn"
-              type="button"
-              disabled={busy}
-              onClick={() => runAction(`/api/game/${encodeURIComponent(gamecode)}/set_wip`, {
-                player_id: playerId,
-                team_id: teamId,
-                wip_limit: Number(wip || '2')
-              }, 'WIP обновлен.')}
-            >
-              Изменить WIP
-            </button>
-          </div>
+          <p className="help" style={{ margin: '0 0 8px' }}>
+            Нажмите на лимит в заголовке любой колонки, чтобы изменить его прямо на доске.
+          </p>
           <div className="actions">
             <button
               className="btn"
