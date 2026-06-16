@@ -325,6 +325,25 @@ a {
   padding: 12px;
 }
 
+.cfd-header {
+  margin: 12px 0 0 0;
+  font-size: 14px;
+  color: var(--text-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cfd-header:hover {
+  opacity: 0.8;
+}
+
+.cfd-content {
+  margin-top: 12px;
+}
+
 .cfd-row {
   display: flex;
   justify-content: space-between;
@@ -344,6 +363,56 @@ a {
 .cfd-val {
   font-weight: 600;
   color: #4a8ad4;
+}
+
+/* Tooltips */
+.metric-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+  border-bottom: 1px dotted #999;
+}
+
+.metric-tooltip-wrapper .metric-tooltip-text {
+  visibility: hidden;
+  opacity: 0;
+  width: max-content;
+  max-width: 220px;
+  background-color: var(--ink);
+  color: var(--bg-color);
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px 12px;
+  position: absolute;
+  z-index: 100;
+  bottom: 150%;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: opacity 0.2s, visibility 0.2s;
+  font-size: 12px;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  pointer-events: none;
+  line-height: 1.4;
+}
+
+.metric-tooltip-wrapper .metric-tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--ink) transparent transparent transparent;
+}
+
+.metric-tooltip-wrapper:hover .metric-tooltip-text {
+  visibility: visible;
+  opacity: 1;
 }
 
 .team-stars-grid {
