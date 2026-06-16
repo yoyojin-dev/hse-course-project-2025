@@ -212,3 +212,4 @@ __marimo__/
 logs/
 
 app/frontend/node_modules/
+metrics/

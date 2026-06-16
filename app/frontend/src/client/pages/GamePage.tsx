@@ -320,6 +320,7 @@ const GamePage: React.FC = () => {
   });
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [flashTaskId, setFlashTaskId] = useState('');
+  const [isCfdOpen, setIsCfdOpen] = useState(false);
   const dragRef = useRef<DragState>({ taskId: '', teamId: '', fromStage: '' });
 
   const { connected: wsConnected } = useGameSocket(gamecode, (nextState: GameState) => {
@@ -772,6 +773,95 @@ const GamePage: React.FC = () => {
                 onSetProjectWip={setProjectWipInline}
               />
             </div>
+            
+            {isFacilitator && state?.started && state?.metrics && state?.phase === 'retro' && (
+              <div className="metrics-panel">
+                <h2>Игровые метрики</h2>
+                <div className="metrics-grid">
+                  <div className="metric-card">
+                    <span className="metric-title metric-tooltip-wrapper">
+                      Lead Time (Ср. дней)
+                      <span className="metric-tooltip-text">Среднее количество дней от начала проекта до его завершения.</span>
+                    </span>
+                    <span className="metric-value">{state.metrics.lead_time.toFixed(1)}</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric-title metric-tooltip-wrapper">
+                      Velocity (Задач/день)
+                      <span className="metric-tooltip-text">Среднее количество завершённых задач в день по всем командам.</span>
+                    </span>
+                    <span className="metric-value">{state.metrics.velocity.toFixed(1)}</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric-title metric-tooltip-wrapper">
+                      WIP (В работе)
+                      <span className="metric-tooltip-text">Общее количество задач, которые сейчас находятся в колонках In Progress и Review.</span>
+                    </span>
+                    <span className="metric-value">{state.metrics.wip}</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric-title metric-tooltip-wrapper">
+                      Blocked (Ожидают)
+                      <span className="metric-tooltip-text">Текущее количество заблокированных задач.</span>
+                    </span>
+                    <span className="metric-value">{state.metrics.blocked}</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric-title metric-tooltip-wrapper">
+                      Дни блокировки
+                      <span className="metric-tooltip-text">Суммарное количество дней, которое задачи провели в заблокированном состоянии за всю игру (Cost of Delay).</span>
+                    </span>
+                    <span className="metric-value">{state.metrics.total_blocked_days}</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric-title metric-tooltip-wrapper">
+                      Штрафы (Суммарно)
+                      <span className="metric-tooltip-text">Общее количество штрафных задач, полученных за просрочку интеграции и другие нарушения.</span>
+                    </span>
+                    <span className="metric-value">{state.metrics.total_penalties}</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric-title metric-tooltip-wrapper">
+                      Cycle Time (Задачи)
+                      <span className="metric-tooltip-text">Среднее время (в днях), за которое отдельная карточка доходит от взятия в работу до Done.</span>
+                    </span>
+                    <span className="metric-value">{state.metrics.avg_task_cycle_time?.toFixed(1) || '0.0'}</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric-title metric-tooltip-wrapper">
+                      Throughput (Итерация)
+                      <span className="metric-tooltip-text">Количество задач, закрытых за последний спринт (с момента прошлого Ретро).</span>
+                    </span>
+                    <span className="metric-value">{state.metrics.last_retro_throughput}</span>
+                  </div>
+                </div>
+                <div className="metrics-cfd">
+                  <h3 
+                    className="cfd-header" 
+                    onClick={() => setIsCfdOpen(!isCfdOpen)}
+                  >
+                    CFD (Текущий статус)
+                    <span>{isCfdOpen ? '▲' : '▼'}</span>
+                  </h3>
+                  {isCfdOpen && (
+                    <div className="cfd-content">
+                      <div className="cfd-row">
+                        <span className="cfd-label">Ready:</span> <span className="cfd-val">{state.metrics.cfd?.ready || 0}</span>
+                      </div>
+                      <div className="cfd-row">
+                        <span className="cfd-label">In Progress:</span> <span className="cfd-val">{state.metrics.cfd?.in_progress || 0}</span>
+                      </div>
+                      <div className="cfd-row">
+                        <span className="cfd-label">Review:</span> <span className="cfd-val">{state.metrics.cfd?.review || 0}</span>
+                      </div>
+                      <div className="cfd-row">
+                        <span className="cfd-label">Done:</span> <span className="cfd-val">{state.metrics.cfd?.done || 0}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

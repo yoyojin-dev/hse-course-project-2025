@@ -51,6 +51,19 @@ export type HistoryEntry = {
   message: string;
 };
 
+export type GameMetrics = {
+  cfd: Record<string, number>;
+  wip: number;
+  lead_time: number;
+  blocked: number;
+  retro_days: number;
+  velocity: number;
+  total_blocked_days: number;
+  total_penalties: number;
+  avg_task_cycle_time: number;
+  last_retro_throughput: number;
+};
+
 export type GameState = {
   code?: string;
   current_day: number;
@@ -68,4 +81,5 @@ export type GameState = {
   teams?: Team[];
   projects?: Project[];
   history?: HistoryEntry[];
+  metrics?: GameMetrics;
 };
