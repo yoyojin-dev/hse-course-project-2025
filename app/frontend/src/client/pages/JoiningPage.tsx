@@ -50,7 +50,7 @@ const JoiningPage: FC = () => {
 
   const options = useMemo(() => teams.map((team) => ({
     id: team.id,
-    label: `${team.name} (${(team.members || []).length}/5)`
+    label: team.name
   })), [teams]);
 
   const join = async () => {
@@ -145,7 +145,6 @@ const JoiningPage: FC = () => {
               Войти в игру
             </button>
             <div className="error">{error}</div>
-            <div className="help">После входа вы попадете на страницу игрового процесса.</div>
           </div>
         </div>
       </div>

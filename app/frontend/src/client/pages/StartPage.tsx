@@ -184,7 +184,6 @@ const StartPage: React.FC = () => {
               </form>
             )}
             {error && <div className="error">{error}</div>}
-            <div className="help">После создания вы получите ссылку для игроков и ведущего.</div>
           </div>
         </div>
       </div>
