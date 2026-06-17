@@ -5,6 +5,7 @@ const CreatedPage: React.FC = () => {
   const { gamecode = '' } = useParams();
   const [params] = useSearchParams();
   const facilitatorId = params.get('facilitator_id') || '';
+  const joinUrl = `${window.location.origin}/joining/${encodeURIComponent(gamecode)}`;
 
   const facilitatorLink = facilitatorId
     ? `/game/${encodeURIComponent(gamecode)}?player_id=${encodeURIComponent(facilitatorId)}`
@@ -22,7 +23,7 @@ const CreatedPage: React.FC = () => {
               </div>
             </div>
             <div className="help">
-              Игроки могут подключиться по ссылке: <a href={`/joining/${gamecode}`}>/joining/{gamecode}</a>
+              Игроки могут подключиться по ссылке: <a href={joinUrl}>{joinUrl}</a>
             </div>
             <button
               className="btn"

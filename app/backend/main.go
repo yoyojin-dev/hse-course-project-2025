@@ -717,8 +717,19 @@ func (s *Server) playerCanAct(g *Game, team *Team, playerID string) bool {
 		if !prog.HeadsBlockDone && hasOwnBlockableTask(g, team, "") {
 			return true
 		}
-		if !prog.HeadsStartDone && hasReadyStartTask(g, team) {
-			return true
+		if !prog.HeadsStartDone {
+			// Step 2: can take from ready, or help another if ready is empty.
+			if hasReadyStartTask(g, team) {
+				return true
+			}
+			// Check if there's any other player's task to help with.
+			for _, st := range []string{"in_progress", "review"} {
+				for _, tid := range team.Board[st] {
+					if t, ok := g.Tasks[tid]; ok && t.OwnerID != playerID {
+						return true
+					}
+				}
+			}
 		}
 		return false
 	default:
@@ -761,7 +772,7 @@ func (s *Server) rollCoinsForPlayers(g *Game) {
 		if coin == "heads" {
 			prog := s.ensurePlayerProgress(g, p.ID)
 			prog.HeadsBlockDone = !hasOwnBlockableTask(g, team, "")
-			prog.HeadsStartDone = !hasReadyStartTask(g, team)
+			prog.HeadsStartDone = false
 			if prog.HeadsBlockDone && prog.HeadsStartDone {
 				g.TurnActionDone[p.ID] = true
 			}
@@ -1283,11 +1294,6 @@ func (s *Server) handleJoinGame(w http.ResponseWriter, r *http.Request) {
 		errorJSON(w, http.StatusBadRequest, "Неизвестная команда")
 		return
 	}
-	if len(team.Members) >= 5 {
-		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "Команда заполнена (не более 5 участников)")
-		return
-	}
 
 	for _, existing := range g.Players {
 		if strings.EqualFold(existing.Nickname, nickname) {
@@ -1541,123 +1547,166 @@ func (s *Server) handleDragTask(w http.ResponseWriter, r *http.Request, code str
 
 	from := task.Stage
 	to := req.ToStage
+	isOwnTask := task.OwnerID == player.ID || task.OwnerID == ""
 	if player.CurrentCoin == "tails" {
-		needOwnOnly := hasOwnHeadsAction(g, team, player.ID)
-		canTakeNewTails := hasReadyStartTask(g, team)
-		isHelpingOther := task.Stage != "ready" && task.OwnerID != player.ID
-		if isHelpingOther && (needOwnOnly || canTakeNewTails) {
-			if needOwnOnly {
+		isHelpingOther := !isOwnTask && from != "ready"
+		if isHelpingOther {
+			canTakeNew := hasReadyStartTask(g, team)
+			if canTakeNew {
+				errorJSON(w, http.StatusConflict, "Помочь другому можно только если в ready нет задач")
+				return
+			}
+			hasOwnActive := false
+			for _, st := range []string{"in_progress", "review"} {
+				for _, tid := range team.Board[st] {
+					if t, ok := g.Tasks[tid]; ok && t.OwnerID == player.ID {
+						hasOwnActive = true
+					}
+				}
+			}
+			if hasOwnActive {
 				errorJSON(w, http.StatusConflict, "Сначала поработайте со своими задачами")
-			} else {
-				errorJSON(w, http.StatusConflict, "Помочь другому можно только если нет доступных задач для взятия")
-			}
-			return
-		}
-
-		if task.Blocked {
-			if from != to {
-				errorJSON(w, http.StatusConflict, "Заблокированную задачу можно только разблокировать")
 				return
 			}
-			task.Blocked = false
-			// Owner stays — unblocking helps the original assignee continue their work.
-			s.appendLog(g, "drag", "Игрок "+player.Nickname+" разблокировал "+task.ID+".")
-		} else {
-			allowed := false
-			switch from {
-			case "ready":
-				allowed = to == "in_progress"
-			case "in_progress":
-				allowed = to == "review"
-			case "review":
-				allowed = to == "done"
-			}
-			if !allowed {
-				state := stateFromGame(g)
-				locked = false
-				s.mu.Unlock()
-				writeJSON(w, http.StatusOK, state)
-				s.broadcastGameState(code, state)
-				return
-			}
-			if !s.moveTaskToStage(g, team, task, to) {
-				errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
-				return
-			}
-			// Only assign ownership when taking a new task from ready.
-			if from == "ready" {
-				task.OwnerID = player.ID
-			}
-			s.appendLog(g, "drag", "Игрок "+player.Nickname+" перетащил "+task.ID+" из "+from+" в "+to+" (решка).")
-		}
-		s.advanceTurn(g, player.ID)
-	} else {
-		prog := s.ensurePlayerProgress(g, player.ID)
-		// Help action: if the player can't take a new task (ready is empty),
-		// they may advance or unblock someone else's task instead.
-		// Owner is not changed in this case.
-		canTakeNew := hasReadyStartTask(g, team)
-		isHelp := !canTakeNew &&
-			task.OwnerID != player.ID &&
-			!prog.HeadsBlockDone && !prog.HeadsStartDone
-
-		if isHelp {
+			// Help: advance or unblock someone else's task. Owner stays unchanged.
 			if task.Blocked {
 				if from != to {
 					errorJSON(w, http.StatusConflict, "Заблокированную задачу можно только разблокировать")
 					return
 				}
 				task.Blocked = false
-				s.appendLog(g, "drag", "Игрок "+player.Nickname+" помог: разблокировал "+task.ID+" (орёл).")
+				s.appendLog(g, "drag", "Игрок "+player.Nickname+" помог: разблокировал "+task.ID+" (решка).")
 			} else {
-				allowed := false
-				switch from {
-				case "in_progress":
-					allowed = to == "review"
-				case "review":
-					allowed = to == "done"
-				}
+				allowed := (from == "in_progress" && to == "review") || (from == "review" && to == "done")
 				if !allowed {
-					errorJSON(w, http.StatusConflict, "Орёл (помощь): можно продвинуть чужую задачу вперёд или разблокировать её")
+					errorJSON(w, http.StatusConflict, "Решка (помощь): продвиньте чужую задачу вперёд или разблокируйте её")
 					return
 				}
 				if !s.moveTaskToStage(g, team, task, to) {
 					errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
 					return
 				}
-				s.appendLog(g, "drag", "Игрок "+player.Nickname+" помог: продвинул "+task.ID+" из "+from+" в "+to+" (орёл).")
+				s.appendLog(g, "drag", "Игрок "+player.Nickname+" помог: продвинул "+task.ID+" из "+from+" в "+to+" (решка).")
 			}
-			prog.HeadsBlockDone = true
-			prog.HeadsStartDone = true
-			s.advanceTurn(g, player.ID)
-		} else if !prog.HeadsBlockDone {
+		} else {
+			// Own task or taking from ready.
+			if task.Blocked {
+				if from != to {
+					errorJSON(w, http.StatusConflict, "Заблокированную задачу можно только разблокировать")
+					return
+				}
+				task.Blocked = false
+				s.appendLog(g, "drag", "Игрок "+player.Nickname+" разблокировал "+task.ID+".")
+			} else {
+				allowed := false
+				switch from {
+				case "ready":
+					allowed = to == "in_progress"
+				case "in_progress":
+					allowed = to == "review"
+				case "review":
+					allowed = to == "done"
+				}
+				if !allowed {
+					state := stateFromGame(g)
+					locked = false
+					s.mu.Unlock()
+					writeJSON(w, http.StatusOK, state)
+					s.broadcastGameState(code, state)
+					return
+				}
+				if !s.moveTaskToStage(g, team, task, to) {
+					errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
+					return
+				}
+				if from == "ready" {
+					task.OwnerID = player.ID
+				}
+				s.appendLog(g, "drag", "Игрок "+player.Nickname+" перетащил "+task.ID+" из "+from+" в "+to+" (решка).")
+			}
+		}
+		s.advanceTurn(g, player.ID)
+	} else {
+		prog := s.ensurePlayerProgress(g, player.ID)
+
+		// Auto-skip block step if player has no own unblocked tasks to block.
+		if !prog.HeadsBlockDone {
+			hasBlockable := false
+			for _, st := range []string{"in_progress", "review"} {
+				for _, tid := range team.Board[st] {
+					if t, ok := g.Tasks[tid]; ok && !t.Blocked && t.OwnerID == player.ID {
+						hasBlockable = true
+					}
+				}
+			}
+			if !hasBlockable {
+				prog.HeadsBlockDone = true
+			}
+		}
+
+		if !prog.HeadsBlockDone {
+			// Step 1: block own task only.
 			if from != to || from == "ready" {
-				errorJSON(w, http.StatusConflict, "Орёл: сначала заблокируйте задачу в работе или на ревью")
+				errorJSON(w, http.StatusConflict, "Орёл: сначала заблокируйте свою задачу в работе или на ревью")
 				return
 			}
 			if task.Blocked || (from != "in_progress" && from != "review") {
 				errorJSON(w, http.StatusConflict, "Орёл: выберите незаблокированную задачу в работе или на ревью")
 				return
 			}
+			if !isOwnTask {
+				errorJSON(w, http.StatusConflict, "Орёл: заблокировать можно только свою задачу")
+				return
+			}
 			task.Blocked = true
 			prog.HeadsBlockDone = true
 			s.appendLog(g, "drag", "Игрок "+player.Nickname+" заблокировал "+task.ID+" (орёл).")
 		} else if !prog.HeadsStartDone {
-			if from != "ready" || to != "in_progress" {
-				errorJSON(w, http.StatusConflict, "Орёл: возьмите новую задачу")
-				return
+			// Step 2: take from ready, or (if ready empty) help another player.
+			canTakeNew := hasReadyStartTask(g, team)
+			if canTakeNew {
+				if from != "ready" || to != "in_progress" {
+					errorJSON(w, http.StatusConflict, "Орёл: возьмите новую задачу из ready")
+					return
+				}
+				if task.Blocked {
+					errorJSON(w, http.StatusConflict, "Нельзя взять заблокированную задачу")
+					return
+				}
+				if !s.moveTaskToStage(g, team, task, to) {
+					errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
+					return
+				}
+				task.OwnerID = player.ID
+				prog.HeadsStartDone = true
+				s.appendLog(g, "drag", "Игрок "+player.Nickname+" начал новую задачу "+task.ID+" (орёл).")
+			} else {
+				// Help: advance or unblock someone else's task. Owner stays unchanged.
+				if isOwnTask {
+					errorJSON(w, http.StatusConflict, "Орёл: в ready нет задач — продвиньте или разблокируйте чужую задачу")
+					return
+				}
+				if task.Blocked {
+					if from != to {
+						errorJSON(w, http.StatusConflict, "Заблокированную задачу можно только разблокировать")
+						return
+					}
+					task.Blocked = false
+					s.appendLog(g, "drag", "Игрок "+player.Nickname+" помог: разблокировал "+task.ID+" (орёл).")
+				} else {
+					allowed := (from == "in_progress" && to == "review") || (from == "review" && to == "done")
+					if !allowed {
+						errorJSON(w, http.StatusConflict, "Орёл (помощь): продвиньте чужую задачу вперёд или разблокируйте её")
+						return
+					}
+					if !s.moveTaskToStage(g, team, task, to) {
+						errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
+						return
+					}
+					s.appendLog(g, "drag", "Игрок "+player.Nickname+" помог: продвинул "+task.ID+" из "+from+" в "+to+" (орёл).")
+				}
+				prog.HeadsStartDone = true
 			}
-			if task.Blocked {
-				errorJSON(w, http.StatusConflict, "Нельзя взять заблокированную задачу")
-				return
-			}
-			if !s.moveTaskToStage(g, team, task, to) {
-				errorJSON(w, http.StatusConflict, "Задачу нельзя переместить")
-				return
-			}
-			task.OwnerID = player.ID
-			prog.HeadsStartDone = true
-			s.appendLog(g, "drag", "Игрок "+player.Nickname+" начал новую задачу "+task.ID+" (орёл).")
 		} else {
 			errorJSON(w, http.StatusConflict, "Действия для орла на этот день уже выполнены")
 			return
@@ -2032,11 +2081,6 @@ func (s *Server) handleSwitchTeam(w http.ResponseWriter, r *http.Request, code s
 	if target.TeamID == req.NewTeamID {
 		s.mu.Unlock()
 		errorJSON(w, http.StatusBadRequest, "Игрок уже в этой команде")
-		return
-	}
-	if len(newTeam.Members) >= 5 {
-		s.mu.Unlock()
-		errorJSON(w, http.StatusConflict, "В команде уже максимальное количество участников")
 		return
 	}
 
